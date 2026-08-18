@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Fingerprint, KeyRound, RefreshCw, ShieldCheck, WalletCards, Zap } from 'lucide-react';
@@ -21,13 +21,11 @@ function OnboardingContent() {
   const [error, setError] = useState<string | null>(null);
 
   // Detect non-HTTPS origins — WebAuthn is blocked by most browsers except on localhost
-  const [isInsecureOrigin, setIsInsecureOrigin] = useState(false);
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      setIsInsecureOrigin(!isLocalhost && window.location.protocol !== 'https:');
-    }
-  }, []);
+  const [isInsecureOrigin] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return !isLocalhost && window.location.protocol !== 'https:';
+  });
 
   async function finishConnection(provider: unknown) {
     await connect({ info: passkeyWalletInfo, provider: provider as never });

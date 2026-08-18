@@ -27,6 +27,7 @@ export default function PasskeyReconnectBanner() {
       const t = window.setTimeout(() => setVisible(true), 600);
       return () => window.clearTimeout(t);
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(false);
   }, [status, isPasskeySession, dismissed]);
 
