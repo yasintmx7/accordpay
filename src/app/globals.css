@@ -28,6 +28,17 @@ input {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Thin custom scrollbar for webkit browsers */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(203 213 225); border-radius: 999px; }
+.dark ::-webkit-scrollbar-thumb { background: rgb(63 63 70); }
+
+/* Tabular numbers for amounts and addresses */
+.font-mono, [class*="font-mono"] {
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
 button:disabled,
 [aria-disabled="true"] {
   cursor: not-allowed;
