@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useEffect, useState } from 'react';
 
 interface Countdown {
@@ -22,11 +22,12 @@ export function useCountdown(unixSeconds: number): Countdown {
     const hours = Math.floor((diff % 86400) / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
     const seconds = diff % 60;
-    const label = days > 0
-      ? ${days}d h remaining
-      : hours > 0
-      ? ${hours}h m remaining
-      : ${minutes}m s remaining;
+    const label =
+      days > 0
+        ? `${days}d ${hours}h remaining`
+        : hours > 0
+        ? `${hours}h ${minutes}m remaining`
+        : `${minutes}m ${seconds}s remaining`;
     return { days, hours, minutes, seconds, isExpired: false, label };
   };
 
@@ -35,7 +36,7 @@ export function useCountdown(unixSeconds: number): Countdown {
   useEffect(() => {
     const id = window.setInterval(() => setState(calc()), 1000);
     return () => window.clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unixSeconds]);
 
   return state;
