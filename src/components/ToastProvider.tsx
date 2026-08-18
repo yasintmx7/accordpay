@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, X, AlertTriangle } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 export type ToastType = 'success' | 'error' | 'warning';
 
@@ -15,6 +16,7 @@ const listeners: Array<(toast: ToastMessage) => void> = [];
 
 export function toast(message: string, type: ToastType = 'success') {
   const id = crypto.randomUUID();
+  triggerHaptic(type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning');
   listeners.forEach((fn) => fn({ id, type, message }));
 }
 

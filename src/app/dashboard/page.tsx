@@ -7,7 +7,8 @@ import { currentEarlySettlementAmount, formatTransactionError, getInvoiceIdsByBu
 import { formatUsdc } from '@/lib/usdc';
 import { ACCORDPAY_ADDRESS } from '@/lib/config';
 import InvoiceMobileCards from '@/components/InvoiceMobileCards';
-import { CircleAlert, Rocket, Unplug } from 'lucide-react';
+import { CircleAlert, RefreshCw, Rocket, Unplug } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 const CONTRACT = ACCORDPAY_ADDRESS;
 
@@ -57,6 +58,13 @@ export default function DashboardPage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const [refreshIndex, setRefreshIndex] = useState(0);
+
+  const reloadInvoices = () => {
+    triggerHaptic('light');
+    setRefreshIndex((i) => i + 1);
+  };
+
   useEffect(() => {
     if (status !== 'connected' || !address || !publicClient || !CONTRACT) return;
     let cancelled = false;
@@ -64,7 +72,6 @@ export default function DashboardPage() {
     const fetchAll = async () => {
       setLoading(true);
       setError(null);
-      setInvoices([]);
       try {
         const [buyerIds, supplierIds] = await Promise.all([
           getInvoiceIdsByBuyer(publicClient, CONTRACT, address),
@@ -81,7 +88,7 @@ export default function DashboardPage() {
     };
     void fetchAll();
     return () => { cancelled = true; };
-  }, [status, address, publicClient]);
+  }, [status, address, publicClient, refreshIndex]);
 
   if (status === 'disconnected' || status === 'connecting' || status === 'no_wallet') return <ConnectPrompt />;
   if (status === 'wrong_network') return <WrongNetworkPrompt />;
@@ -118,7 +125,6 @@ export default function DashboardPage() {
     return 'View details';
   }
 
-
   return (
     <div className="page-shell space-y-8 py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -126,8 +132,19 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">Dashboard</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">{invoices.length} {invoices.length === 1 ? 'invoice' : 'invoices'} · {needsAttention.length} need{needsAttention.length === 1 ? 's' : ''} attention · {settled.length} completed</p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-          <Link href="/invoices/new" className="button-primary col-span-2 sm:col-span-1">Create Invoice</Link>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={reloadInvoices}
+            disabled={loading}
+            aria-label="Refresh dashboard data"
+            title="Refresh dashboard"
+            className="button-secondary min-h-11 min-w-11 px-3"
+          >
+            <RefreshCw size={16} className={`text-slate-600 dark:text-zinc-300 ${loading ? 'animate-spin' : ''}`} />
+            <span className="text-xs font-semibold sm:inline">Refresh</span>
+          </button>
+          <Link href="/invoices/new" className="button-primary">Create Invoice</Link>
           <Link href="/invoices/sent" className="button-secondary">Sent</Link>
           <Link href="/invoices/received" className="button-secondary">Received</Link>
         </div>

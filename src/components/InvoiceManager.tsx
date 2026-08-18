@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Download, RefreshCw } from 'lucide-react';
 import { InvoiceStatus, statusLabel, type OnChainInvoice } from '@/lib/accordpay';
 import { formatUsdc } from '@/lib/usdc';
+import { triggerHaptic } from '@/lib/haptics';
 
 type Props = {
   invoices: OnChainInvoice[];
   role: 'buyer' | 'supplier' | 'all';
+  onRefresh?: () => Promise<void> | void;
 };
 
 type SortKey = 'newest' | 'oldest' | 'amount-high' | 'amount-low' | 'due-soon';
@@ -25,11 +28,12 @@ function csvCell(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-export default function InvoiceManager({ invoices, role }: Props) {
+export default function InvoiceManager({ invoices, role, onRefresh }: Props) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
   const [sort, setSort] = useState<SortKey>('newest');
   const [now] = useState(() => BigInt(Math.floor(Date.now() / 1_000)));
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const visible = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -56,7 +60,22 @@ export default function InvoiceManager({ invoices, role }: Props) {
       });
   }, [invoices, now, query, sort, status]);
 
+  async function handleRefresh() {
+    triggerHaptic('light');
+    setIsRefreshing(true);
+    try {
+      if (onRefresh) {
+        await onRefresh();
+      } else if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }
+
   function exportCsv() {
+    triggerHaptic('light');
     const header = ['Invoice ID', 'Buyer', 'Supplier', 'Amount USDC', 'Early amount USDC', 'Status', 'Created', 'Due'];
     const rows = visible.map((invoice) => [
       invoice.id.toString(), invoice.buyer, invoice.supplier, formatUsdc(invoice.fullAmount),
@@ -75,7 +94,7 @@ export default function InvoiceManager({ invoices, role }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="card grid gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(15rem,1fr)_12rem_12rem_auto]">
+      <div className="card grid gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(15rem,1fr)_12rem_12rem_auto_auto]">
         <label className="sr-only" htmlFor={`${role}-invoice-search`}>Search invoices</label>
         <input id={`${role}-invoice-search`} value={query} onChange={(event) => setQuery(event.target.value)} className="field-input" placeholder="Search ID, wallet or reference hash" />
         <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)} className="field-input">
@@ -86,7 +105,28 @@ export default function InvoiceManager({ invoices, role }: Props) {
           <option value="amount-high">Amount: high to low</option><option value="amount-low">Amount: low to high</option>
           <option value="due-soon">Due date: soonest</option>
         </select>
-        <button type="button" onClick={exportCsv} disabled={visible.length === 0} className="button-secondary disabled:cursor-not-allowed disabled:opacity-50">Export CSV</button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={isRefreshing}
+            aria-label="Refresh invoices"
+            title="Refresh invoices"
+            className="button-secondary flex-1 sm:flex-initial min-w-[2.75rem] px-3"
+          >
+            <RefreshCw size={16} className={`text-slate-600 dark:text-zinc-300 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="sm:hidden">Refresh</span>
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={visible.length === 0}
+            className="button-secondary flex-1 sm:flex-initial disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download size={15} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       <p className="text-sm text-slate-500 dark:text-zinc-400">Showing {visible.length} of {invoices.length} invoices</p>

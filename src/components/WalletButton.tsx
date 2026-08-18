@@ -1,9 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@/lib/wallet';
 import Link from 'next/link';
 import { Check, Copy, LogOut, Wallet } from 'lucide-react';
+
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function WalletButton() {
   const { status, address, wallets, activeWallet, error, connect, disconnect, switchToArcTestnet } = useWallet();
@@ -75,6 +77,7 @@ export default function WalletButton() {
     if (!address) return;
     await navigator.clipboard.writeText(address);
     setCopied(true);
+    triggerHaptic('light');
     window.setTimeout(() => setCopied(false), 2000);
   }
 
@@ -148,7 +151,11 @@ export default function WalletButton() {
               <button
                 type="button"
                 id="wallet-disconnect"
-                onClick={() => { void disconnect(); setShowCard(false); }}
+                onClick={() => {
+                  triggerHaptic('medium');
+                  void disconnect();
+                  setShowCard(false);
+                }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
               >
                 <LogOut size={16} />

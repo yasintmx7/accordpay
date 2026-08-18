@@ -1,8 +1,9 @@
-﻿'use client';
+'use client';
 import { useState, useCallback } from 'react';
+import { triggerHaptic } from './haptics';
 
 /**
- * Hook that copies text to clipboard and exposes a transient copied state
+ * Hook that copies text to clipboard and exposes a transient `copied` state
  * that resets after the given duration (default 2 s).
  */
 export function useClipboard(resetAfterMs = 2000) {
@@ -12,6 +13,7 @@ export function useClipboard(resetAfterMs = 2000) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
+      triggerHaptic('light');
       window.setTimeout(() => setCopied(false), resetAfterMs);
     } catch {
       // Clipboard API not available (e.g. HTTP or permissions denied)
@@ -21,3 +23,4 @@ export function useClipboard(resetAfterMs = 2000) {
 
   return { copied, copy };
 }
+
