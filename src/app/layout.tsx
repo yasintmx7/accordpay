@@ -9,6 +9,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import ReminderWatcher from "@/components/ReminderWatcher";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import PasskeyReconnectBanner from "@/components/PasskeyReconnectBanner";
+import { ToastProvider } from "@/components/ToastProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -31,6 +32,7 @@ export default function RootLayout({
           <WalletProvider>
             <ReminderWatcher />
             <PasskeyReconnectBanner />
+            <ToastProvider />
             <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
               <div className="page-shell">
                 <div className="flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
