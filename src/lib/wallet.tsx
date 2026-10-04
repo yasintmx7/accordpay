@@ -261,34 +261,51 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const switchToArcTestnet = useCallback(async () => {
     if (!activeWallet) return;
     setError(null);
+    const targetChainId = `0x${arcTestnet.id.toString(16)}`;
+
+    // Helper: small delay so the wallet has time to commit the chain change internally
+    const tick = () => new Promise<void>((r) => setTimeout(r, 500));
+
     try {
-      await activeWallet.provider.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${arcTestnet.id.toString(16)}` }],
-      });
-    } catch (switchError) {
-      const code = (switchError as { code?: number })?.code;
-      if (code !== 4902) {
-        setError(errorMessage(switchError));
-        return;
-      }
+      // Step 1 — Try adding the chain first (many wallets require this before switch).
+      //          If it already exists the wallet will either succeed silently or throw 4902.
       try {
         await activeWallet.provider.request({
           method: 'wallet_addEthereumChain',
           params: [{
-            chainId: `0x${arcTestnet.id.toString(16)}`,
+            chainId: targetChainId,
             chainName: arcTestnet.name,
             nativeCurrency: arcTestnet.nativeCurrency,
             rpcUrls: [...arcTestnet.rpcUrls.default.http],
             blockExplorerUrls: [arcTestnet.blockExplorers.default.url],
           }],
         });
-      } catch (addError) {
-        setError(errorMessage(addError));
-        return;
+      } catch {
+        // It's fine — the chain may already exist, or the wallet doesn't support this method.
       }
+
+      // Step 2 — Switch to the chain
+      await activeWallet.provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: targetChainId }],
+      });
+
+      // Give the wallet a moment to reflect the change before we re-sync
+      await tick();
+    } catch (switchError) {
+      const code = (switchError as { code?: number })?.code;
+      // 4001 = user rejected the request — don't show an error, just return
+      if (code === 4001) return;
+      setError(errorMessage(switchError));
+      return;
     }
-    await synchronize(activeWallet, false);
+
+    // Re-synchronize to pick up the new chain
+    try {
+      await synchronize(activeWallet, false);
+    } catch {
+      // If re-sync fails, the chainChanged event listener will pick it up
+    }
   }, [activeWallet, synchronize]);
 
   useEffect(() => {
