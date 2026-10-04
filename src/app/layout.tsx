@@ -33,24 +33,27 @@ export default function RootLayout({
             <ReminderWatcher />
             <PasskeyReconnectBanner />
             <ToastProvider />
-            <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+            <header className="site-header">
               <div className="page-shell">
                 <div className="flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
                   <div className="flex min-w-0 items-center gap-6">
-                    <Link href="/" className="flex shrink-0 items-center gap-2.5 text-xl font-bold tracking-tight text-slate-950 dark:text-white">
+                    <Link href="/" className="site-logo">
                       <Image src="/accordpay-mark.svg" alt="" width={38} height={38} className="h-8 w-8 sm:h-[38px] sm:w-[38px]" />
                       <span className="hidden min-[370px]:inline">AccordPay</span>
                     </Link>
-                    <nav className="hidden items-center space-x-4 lg:flex">
-                      <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition">Dashboard</Link>
-                      <Link href="/invoices/new" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition">Create Invoice</Link>
-                      <Link href="/bridge" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition">Crosschain</Link>
-                      <Link href="/payouts" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition">Payouts</Link>
-                      <Link href="/settings" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition">Settings</Link>
-                      <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition">Faucet ↗</a>
+                    <nav className="hidden items-center gap-1 lg:flex">
+                      <Link href="/dashboard" className="nav-link">Dashboard</Link>
+                      <Link href="/invoices/new" className="nav-link">Create Invoice</Link>
+                      <Link href="/bridge" className="nav-link">Crosschain</Link>
+                      <Link href="/payouts" className="nav-link">Payouts</Link>
+                      <Link href="/settings" className="nav-link">Settings</Link>
+                      <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="nav-link nav-link-external">
+                        Faucet
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>
                     </nav>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                     <ThemeToggle />
                     <WalletButton />
                   </div>
@@ -61,18 +64,20 @@ export default function RootLayout({
               {children}
             </main>
             <MobileBottomNav />
-            <footer className="mt-auto hidden border-t border-slate-200 bg-white py-8 dark:border-zinc-700 dark:bg-zinc-900 lg:block">
-              <div className="page-shell flex flex-col items-center gap-4 text-center text-xs leading-5 text-slate-500 dark:text-zinc-400 sm:text-sm">
-                <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-                  <a href="https://twitter.com/accordpay" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+            <footer className="site-footer">
+              <div className="page-shell flex flex-col items-center gap-5 text-center">
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-1">
+                  <a href="https://twitter.com/accordpay" target="_blank" rel="noreferrer" className="footer-link">
+                    <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
                     @accordpay
                   </a>
-                  <Link href="/terms" className="hover:text-slate-900 dark:hover:text-zinc-200 transition">Terms of Service</Link>
-                  <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-zinc-200 transition">Privacy Policy</Link>
+                  <span className="footer-dot">·</span>
+                  <Link href="/terms" className="footer-link">Terms of Service</Link>
+                  <span className="footer-dot">·</span>
+                  <Link href="/privacy" className="footer-link">Privacy Policy</Link>
                 </div>
-                <div className="flex flex-col items-center gap-1.5">
-                  <div>&copy; 2026 AccordPay &mdash; Arc Testnet only &mdash; Unaudited. Testnet USDC has no financial value.</div>
+                <div className="footer-disclaimer">
+                  &copy; 2026 AccordPay &mdash; Arc Testnet only &mdash; Unaudited. Testnet USDC has no financial value.
                 </div>
               </div>
             </footer>
