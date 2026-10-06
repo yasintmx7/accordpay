@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   },
   description: "Create, secure, and settle B2B invoices with testnet USDC on Arc.",
   icons: {
-    icon: "/accordpay-logo-dark.png",
-    shortcut: "/accordpay-logo-dark.png",
-    apple: "/accordpay-logo-dark.png",
+    icon: "/accordpay-favicon-v3.png",
+    shortcut: "/accordpay-favicon-v3.png",
+    apple: "/accordpay-favicon-v3.png",
   },
 };
 
