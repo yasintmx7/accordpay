@@ -1,206 +1,226 @@
 import Link from 'next/link';
+import {
+  ArrowRight,
+  BadgeDollarSign,
+  Check,
+  Clock3,
+  ExternalLink,
+  FilePlus2,
+  Landmark,
+  LockKeyhole,
+  Network,
+  ShieldCheck,
+  Sparkles,
+  WalletCards,
+  Zap,
+} from 'lucide-react';
+
+const benefits = [
+  { icon: BadgeDollarSign, title: 'USDC settlement', description: 'Stable, predictable payments' },
+  { icon: LockKeyhole, title: 'Non-custodial', description: 'Funds remain locked onchain' },
+  { icon: Network, title: 'Built on Arc', description: 'Fast settlement, low fees' },
+] as const;
+
+const steps = [
+  {
+    icon: FilePlus2,
+    title: 'Create & fund',
+    description: 'The buyer creates an invoice and secures the full USDC amount in the AccordPay contract.',
+  },
+  {
+    icon: WalletCards,
+    title: 'Supplier chooses',
+    description: 'The supplier can take the available early payment or keep the invoice funded until maturity.',
+  },
+  {
+    icon: Landmark,
+    title: 'Settle onchain',
+    description: 'At maturity, the contract delivers the full amount to the supplier’s configured payout wallet.',
+  },
+] as const;
+
+const faqs = [
+  {
+    question: 'What is AccordPay?',
+    answer: 'AccordPay is a non-custodial B2B invoice settlement platform. Buyers secure invoice funds in USDC while suppliers choose when to settle under the invoice’s existing terms.',
+  },
+  {
+    question: 'How does early settlement work?',
+    answer: 'The buyer defines the full invoice amount and an early-payment amount. Before maturity, the supplier can accept the current early-payment quote; the remaining discount returns to the buyer.',
+  },
+  {
+    question: 'What happens at maturity?',
+    answer: 'Once the due time is reached, settlement can be finalized onchain. The contract sends the full secured amount only to the supplier’s configured payout wallet.',
+  },
+  {
+    question: 'Which network and asset does AccordPay use?',
+    answer: 'The current product runs on Arc Testnet and settles invoices with testnet USDC. Testnet assets have no financial value.',
+  },
+] as const;
+
 export default function Home() {
   return (
-    <div className="landing-page">
-      {/* ─── Hero Section ─── */}
-      <section className="hero-section">
-        <div className="hero-bg">
-          <div className="hero-gradient" />
-          <div className="hero-grid" />
-          <div className="hero-glow hero-glow-1" />
-          <div className="hero-glow hero-glow-2" />
-        </div>
+    <div className="home-page">
+      <section className="home-hero">
+        <div className="home-hero-grid" aria-hidden="true" />
+        <div className="home-hero-halo" aria-hidden="true" />
 
-        <div className="page-shell relative z-10 py-16 sm:py-28">
-          <div className="mx-auto max-w-4xl space-y-6 text-center">
-            <div className="hero-badge">
-              <span className="hero-badge-dot" />
-              Programmable B2B Settlement on Arc
-            </div>
+        <div className="page-shell home-hero-layout">
+          <div className="home-hero-copy">
+            <div className="home-kicker"><span className="home-kicker-dot" />B2B settlement on Arc</div>
 
-            <h1 className="hero-title">
-              Fund invoices.<br className="hidden sm:inline" />
-              <span className="hero-title-gradient"> Settle on your terms.</span>
+            <h1 className="home-title">
+              <span>Fund invoices.</span>
+              <span className="home-title-accent">Settle on your terms.</span>
             </h1>
 
-            <p className="mx-auto max-w-2xl text-base leading-7 text-slate-500 dark:text-zinc-400 sm:text-lg sm:leading-8">
-              AccordPay gives businesses programmable control over B2B invoice settlement.
-              Buyers secure invoices with USDC, while suppliers choose full payment at
-              maturity or earlier settlement at transparent terms.
-            </p>
+            <p className="home-lead">Lock USDC into an invoice. Suppliers can settle early or receive the full amount at maturity.</p>
+            <p className="home-supporting-copy">Simple, programmable settlement without unnecessary paperwork or intermediaries.</p>
 
-            <div className="flex flex-col justify-center gap-3 pt-6 sm:flex-row sm:gap-4">
-              <Link href="/dashboard" className="hero-btn-primary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                Open Dashboard
-              </Link>
-              <Link href="/invoices/new" className="hero-btn-secondary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                Create Invoice
-              </Link>
+            <div className="home-hero-actions">
+              <Link href="/dashboard" className="home-primary-cta">Open Dashboard <ArrowRight size={17} strokeWidth={2} /></Link>
+              <Link href="/invoices/new" className="home-secondary-cta"><FilePlus2 size={17} strokeWidth={2} /> Create Invoice</Link>
             </div>
+
+            <div className="home-assurance" aria-label="Product assurances">
+              <span><Check size={14} /> Non-custodial</span>
+              <span><Check size={14} /> USDC-native</span>
+              <span><Check size={14} /> Arc Testnet</span>
+            </div>
+          </div>
+
+          <div className="home-product-preview" aria-label="AccordPay invoice preview">
+            <div className="home-preview-topline">
+              <div><p className="home-preview-label">Invoice</p><p className="home-preview-id">#AP-1042</p></div>
+              <span className="home-funded-badge"><span /> Funded</span>
+            </div>
+
+            <div className="home-preview-amount"><span>Amount secured</span><strong>10,000 <small>USDC</small></strong></div>
+
+            <div className="home-preview-meta">
+              <div><span>Network</span><strong><span className="home-network-dot" /> Arc</strong></div>
+              <div><span>Due</span><strong>14 days</strong></div>
+            </div>
+
+            <div className="home-preview-divider" />
+            <p className="home-preview-section-label">Supplier options</p>
+
+            <div className="home-option-list">
+              <div className="home-option home-option-active">
+                <span className="home-option-icon"><Zap size={17} /></span>
+                <span><strong>Settle early</strong><small>Receive the current quote</small></span>
+                <span className="home-option-check"><Check size={14} /></span>
+              </div>
+              <div className="home-option">
+                <span className="home-option-icon"><Clock3 size={17} /></span>
+                <span><strong>Wait until maturity</strong><small>Receive the full 10,000 USDC</small></span>
+              </div>
+            </div>
+
+            <div className="home-preview-footnote"><ShieldCheck size={15} /> Terms secured by the AccordPay contract</div>
           </div>
         </div>
       </section>
 
-      {/* ─── Trust Metrics ─── */}
-      <section className="page-shell -mt-6 relative z-10 sm:-mt-10">
-        <div className="trust-metrics-bar">
-          <div className="trust-metric">
-            <span className="trust-metric-value">USDC</span>
-            <span className="trust-metric-label">Stablecoin Settlement</span>
+      <section className="page-shell home-benefit-wrap" aria-label="AccordPay benefits">
+        <div className="home-benefit-strip">
+          {benefits.map(({ icon: Icon, title, description }) => (
+            <div className="home-benefit" key={title}>
+              <span className="home-benefit-icon"><Icon size={19} strokeWidth={1.8} /></span>
+              <span><strong>{title}</strong><small>{description}</small></span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-section home-how-section">
+        <div className="page-shell">
+          <div className="home-section-heading">
+            <p className="home-section-kicker">How it works</p>
+            <h2>Three steps to settlement</h2>
+            <p>Clear terms for buyers. Flexible timing for suppliers. Settlement enforced onchain.</p>
           </div>
-          <div className="trust-metric-divider" />
-          <div className="trust-metric">
-            <span className="trust-metric-value">Non-Custodial</span>
-            <span className="trust-metric-label">Funds Locked On-Chain</span>
-          </div>
-          <div className="trust-metric-divider" />
-          <div className="trust-metric">
-            <span className="trust-metric-value">Arc Network</span>
-            <span className="trust-metric-label">Near-Zero Fees</span>
+
+          <div className="home-steps">
+            {steps.map(({ icon: Icon, title, description }, index) => (
+              <article className="home-step" key={title}>
+                <div className="home-step-topline">
+                  <span className="home-step-number">0{index + 1}</span>
+                  <span className="home-step-icon"><Icon size={21} strokeWidth={1.8} /></span>
+                </div>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ─── How It Works ─── */}
-      <section className="page-shell py-16 sm:py-24">
-        <div className="mx-auto max-w-4xl">
-          <div className="text-center mb-10 sm:mb-14">
-            <p className="eyebrow text-indigo-600 dark:text-indigo-400 mb-3">How it works</p>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              Three steps to settlement
-            </h2>
+      <section className="home-section home-outcomes-section">
+        <div className="page-shell home-outcomes-layout">
+          <div className="home-outcomes-copy">
+            <p className="home-section-kicker">One invoice, two outcomes</p>
+            <h2>Liquidity when it helps. Full value when it matters.</h2>
+            <p>AccordPay keeps the commercial flow simple. The buyer secures the obligation once, and the supplier chooses the settlement timing that fits their business.</p>
+            <Link href="/invoices/new" className="home-text-link">Create an invoice <ArrowRight size={16} /></Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
-            <div className="step-card">
-              <div className="step-card-number">1</div>
-              <div className="step-card-icon step-card-icon-blue">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              </div>
-              <h3 className="step-card-title">Create &amp; Fund</h3>
-              <p className="step-card-desc">Buyer creates the invoice and locks USDC securely in the smart contract on Arc.</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-card-number">2</div>
-              <div className="step-card-icon step-card-icon-violet">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
-              </div>
-              <h3 className="step-card-title">Supplier Chooses</h3>
-              <p className="step-card-desc">Wait for full payment at maturity, or settle early at a transparent discount.</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-card-number">3</div>
-              <div className="step-card-icon step-card-icon-emerald">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              </div>
-              <h3 className="step-card-title">Arc Records</h3>
-              <p className="step-card-desc">The settlement outcome is verified and recorded securely on-chain.</p>
-            </div>
+          <div className="home-outcome-cards">
+            <article className="home-outcome-card">
+              <span className="home-outcome-icon"><Zap size={20} /></span>
+              <p className="home-outcome-eyebrow">Before maturity</p>
+              <h3>Settle early</h3>
+              <p>Access working capital sooner using the invoice’s transparent early-payment terms.</p>
+            </article>
+            <article className="home-outcome-card home-outcome-card-featured">
+              <span className="home-outcome-icon"><Clock3 size={20} /></span>
+              <p className="home-outcome-eyebrow">At maturity</p>
+              <h3>Receive full payment</h3>
+              <p>Finalize settlement and route the complete secured amount to the supplier payout wallet.</p>
+            </article>
           </div>
         </div>
       </section>
 
-      {/* ─── Example Settlement ─── */}
-      <section className="page-shell pb-16 sm:pb-24">
-        <div className="mx-auto max-w-2xl">
-          <div className="settlement-card">
-            <div className="settlement-header">
-              <div className="settlement-header-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              </div>
-              <h3 className="settlement-header-title">Example Settlement</h3>
+      <section className="home-section home-trust-section">
+        <div className="page-shell">
+          <div className="home-trust-panel">
+            <div className="home-trust-icon"><Sparkles size={22} /></div>
+            <div>
+              <p className="home-section-kicker">Built for credible settlement</p>
+              <h2>Clear state. Verifiable terms. Controlled payout.</h2>
+              <p>Every invoice state and settlement outcome is readable on Arc, while funds move only through the contract’s defined rules.</p>
             </div>
-
-            <div className="settlement-body">
-              <div className="settlement-row">
-                <span className="settlement-label">Invoice value</span>
-                <span className="settlement-value">1,000 USDC</span>
-              </div>
-              <div className="settlement-row">
-                <span className="settlement-label">Due in</span>
-                <span className="settlement-value">30 days</span>
-              </div>
-              <div className="settlement-row">
-                <span className="settlement-label">Early settlement</span>
-                <span className="settlement-value settlement-value-accent">970 USDC</span>
-              </div>
-              <div className="settlement-row settlement-row-highlight">
-                <span className="settlement-label-bold">Buyer discount</span>
-                <span className="settlement-value-highlight">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  30 USDC
-                </span>
-              </div>
-            </div>
+            <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer" className="home-secondary-cta home-explorer-link">View Arc explorer <ExternalLink size={15} /></a>
           </div>
         </div>
       </section>
 
-      {/* ─── FAQ Section ─── */}
-      <section className="faq-section">
-        <div className="page-shell py-16 sm:py-24">
-          <div className="mx-auto max-w-3xl">
-            <div className="text-center mb-10 sm:mb-14">
-              <p className="eyebrow text-indigo-600 dark:text-indigo-400 mb-3">Support</p>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-                Frequently asked questions
-              </h2>
-            </div>
-
-            <div className="faq-list">
-              <details className="faq-item">
-                <summary className="faq-summary">
-                  <span>What is AccordPay?</span>
-                  <span className="faq-chevron">
-                    <svg fill="none" height="20" width="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-                  </span>
-                </summary>
-                <p className="faq-answer">AccordPay is a non-custodial B2B settlement protocol that lets buyers securely lock invoice funds on the blockchain, while giving suppliers the choice to get paid early at a discount.</p>
+      <section className="home-section home-faq-section">
+        <div className="page-shell home-faq-layout">
+          <div className="home-faq-heading">
+            <p className="home-section-kicker">Questions</p>
+            <h2>Everything you need to know</h2>
+            <p>AccordPay keeps the workflow focused on invoice funding and settlement.</p>
+          </div>
+          <div className="home-faq-list">
+            {faqs.map(({ question, answer }) => (
+              <details className="home-faq-item" key={question}>
+                <summary>{question}<span aria-hidden>+</span></summary>
+                <p>{answer}</p>
               </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <details className="faq-item">
-                <summary className="faq-summary">
-                  <span>Which blockchain does AccordPay use?</span>
-                  <span className="faq-chevron">
-                    <svg fill="none" height="20" width="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-                  </span>
-                </summary>
-                <p className="faq-answer">AccordPay is built on Arc Testnet, utilizing USDC for high-speed, programmable settlements with virtually zero fees.</p>
-              </details>
-
-              <details className="faq-item">
-                <summary className="faq-summary">
-                  <span>How does early settlement work?</span>
-                  <span className="faq-chevron">
-                    <svg fill="none" height="20" width="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-                  </span>
-                </summary>
-                <p className="faq-answer">By default, the buyer sets one fixed early-payment amount that remains unchanged until maturity. Buyers can optionally enable an increasing amount that grows toward the full payment over time. If the supplier accepts early payment, the remaining balance is returned to the buyer.</p>
-              </details>
-
-              <details className="faq-item">
-                <summary className="faq-summary">
-                  <span>Do I need a wallet to use AccordPay?</span>
-                  <span className="faq-chevron">
-                    <svg fill="none" height="20" width="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-                  </span>
-                </summary>
-                <p className="faq-answer">Use a passkey wallet created inside AccordPay—no email or seed phrase—or connect an existing wallet such as MetaMask or Rabby.</p>
-              </details>
-
-              <details className="faq-item">
-                <summary className="faq-summary">
-                  <span>What happens if an invoice reaches its due date?</span>
-                  <span className="faq-chevron">
-                    <svg fill="none" height="20" width="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
-                  </span>
-                </summary>
-                <p className="faq-answer">Once maturity is reached, anyone can finalize settlement, while the contract guarantees that the full invoice amount goes only to the supplier&apos;s configured payout wallet.</p>
-              </details>
+      <section className="home-final-cta">
+        <div className="page-shell">
+          <div className="home-final-cta-panel">
+            <div><p className="home-section-kicker">Start settling on Arc</p><h2>Put your next invoice on better rails.</h2></div>
+            <div className="home-final-actions">
+              <Link href="/dashboard" className="home-primary-cta">Open Dashboard <ArrowRight size={17} /></Link>
+              <Link href="/invoices/new" className="home-secondary-cta">Create Invoice</Link>
             </div>
           </div>
         </div>

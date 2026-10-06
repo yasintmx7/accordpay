@@ -41,28 +41,28 @@ export default function RootLayout({
             <ToastProvider />
             <header className="site-header">
               <div className="page-shell">
-                <div className="flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
-                  <div className="flex min-w-0 items-center gap-6">
+                <div className="flex h-16 items-center justify-between gap-2 sm:h-[72px] sm:gap-3">
+                  <div className="flex min-w-0 items-center gap-5 xl:gap-7">
                     <Link href="/" className="site-logo">
-                      <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg">
+                      <span className="relative h-8 w-8 shrink-0">
                         <Image
-                          src="/accordpay-logo-light.png"
+                          src="/accordpay-mark-light-compact.png"
                           alt=""
                           fill
-                          sizes="36px"
-                          className="object-cover dark:hidden"
+                          sizes="32px"
+                          className="object-contain dark:hidden"
                           priority
                         />
                         <Image
-                          src="/accordpay-logo-dark.png"
+                          src="/accordpay-mark-dark-compact.png"
                           alt=""
                           fill
-                          sizes="36px"
-                          className="hidden object-cover dark:block"
+                          sizes="32px"
+                          className="hidden object-contain dark:block"
                           priority
                         />
                       </span>
-                      <span className="hidden min-[370px]:inline text-xl font-bold text-slate-950 dark:text-white">AccordPay</span>
+                      <span className="hidden min-[370px]:inline">AccordPay</span>
                     </Link>
                     <nav className="hidden items-center gap-1 lg:flex">
                       <Link href="/dashboard" className="nav-link">Dashboard</Link>
