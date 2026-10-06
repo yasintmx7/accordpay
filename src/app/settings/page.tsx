@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Check, Copy, KeyRound, ShieldCheck, Wallet, Building2, Upload } from 'lucide-react';
 import { useWallet } from '@/lib/wallet';
 import NetworkFeeSelector from '@/components/NetworkFeeSelector';
@@ -25,10 +26,11 @@ export default function WalletSettingsPage() {
   const recoveryEnabled = recoveryJustEnabled || Boolean(address && typeof window !== 'undefined' && isRecoveryEnabled(address));
 
   useEffect(() => {
-    if (address) {
-      const existing = getCompanyProfile(address);
-      if (existing) setProfile(existing);
-    }
+    const timer = window.setTimeout(() => {
+      setProfile(address ? (getCompanyProfile(address) ?? {}) : {});
+      setProfileSaved(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [address]);
 
   async function enableRecovery() {
@@ -108,7 +110,7 @@ export default function WalletSettingsPage() {
         <div className="flex items-center gap-5 mb-2">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 overflow-hidden border border-slate-200 dark:bg-zinc-800 dark:border-zinc-700">
             {profile.logo ? (
-              <img src={profile.logo} alt="Logo" className="h-full w-full object-cover" />
+              <Image src={profile.logo} alt="Company logo" width={64} height={64} unoptimized className="h-full w-full object-cover" />
             ) : (
               <Building2 size={24} className="text-slate-400" />
             )}

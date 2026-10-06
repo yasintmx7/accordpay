@@ -6,7 +6,6 @@ import { getAddress, isAddress } from 'viem';
 import { useWallet } from '@/lib/wallet';
 import { createInvoice, formatTransactionError, hashString } from '@/lib/accordpay';
 import { tryParseUsdc, formatUsdc } from '@/lib/usdc';
-import { getExplorerUrl } from '@/lib/arc';
 import NetworkFeeSelector from '@/components/NetworkFeeSelector';
 import { ACCORDPAY_ADDRESS, IS_ACCORDPAY_CONFIGURED } from '@/lib/config';
 import { setInvoiceMeta, notifyInvoiceEvent, getDisplayName } from '@/lib/store';
@@ -22,7 +21,7 @@ function toLocalDateTimeInput(date: Date): string {
 
 export default function CreateInvoicePage() {
   const router = useRouter();
-  const { status, address, walletClient, publicClient, chainId, switchToArcTestnet } = useWallet();
+  const { status, address, walletClient, publicClient, switchToArcTestnet } = useWallet();
   const [supplier, setSupplier] = useState('');
   const [reference, setReference] = useState('');
   const [description, setDescription] = useState('');

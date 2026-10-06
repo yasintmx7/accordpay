@@ -52,7 +52,6 @@ function resolveStatusInfo(status: UnifiedStatus) {
     rejected:    { variant: 'danger',  label: 'Rejected' },
     cancelled:   { variant: 'danger',  label: 'Cancelled' },
     funded:      { variant: 'info',    label: 'Funded' },
-    in_progress: { variant: 'pending', label: 'In Progress' },
     settled:     { variant: 'success', label: 'Settled' },
     overdue:     { variant: 'warning', label: 'Overdue' },
   };

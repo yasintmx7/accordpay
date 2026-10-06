@@ -17,7 +17,6 @@ export type UnifiedStatus =
   | 'rejected'
   | 'cancelled'
   | 'funded'
-  | 'in_progress'
   | 'settled'
   | 'overdue';
 
@@ -32,8 +31,7 @@ const STATUS_MAP: Record<UnifiedStatus, StatusInfo> = {
   sent:        { status: 'sent',        label: 'Sent',          variant: 'pending',  description: 'Invoice sent, waiting for buyer to fund' },
   rejected:    { status: 'rejected',    label: 'Rejected',      variant: 'danger',   description: 'Supplier rejected the invoice terms' },
   cancelled:   { status: 'cancelled',   label: 'Cancelled',     variant: 'danger',   description: 'Invoice has been cancelled' },
-  funded:      { status: 'funded',      label: 'Funded',        variant: 'info',     description: 'Payment secured in escrow on-chain' },
-  in_progress: { status: 'in_progress', label: 'In Progress',   variant: 'pending',  description: 'Funded and awaiting settlement' },
+  funded:      { status: 'funded',      label: 'Funded',        variant: 'info',     description: 'Payment secured and awaiting settlement' },
   settled:     { status: 'settled',     label: 'Settled',       variant: 'success',  description: 'Payment completed and delivered' },
   overdue:     { status: 'overdue',     label: 'Overdue',       variant: 'warning',  description: 'Past due date, settlement available' },
 };
@@ -61,7 +59,7 @@ export function resolveInvoiceStatus(
     if (now >= invoice.dueDate) {
       return STATUS_MAP.overdue;
     }
-    return STATUS_MAP.in_progress;
+    return STATUS_MAP.funded;
   }
 
   // ── Created on-chain but not yet funded ──

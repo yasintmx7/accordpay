@@ -8,8 +8,6 @@
  * this layer only manages business workflow metadata.
  */
 
-import type { Address } from 'viem';
-
 // ── Company Profiles ──────────────────────────────────────────────────
 
 export interface CompanyProfile {
@@ -100,23 +98,7 @@ function loadInvoiceMetas(): Record<string, InvoiceMeta> {
 }
 
 function saveInvoiceMetas(data: Record<string, InvoiceMeta>) {
-  try { 
-    localStorage.setItem(INVOICES_KEY, JSON.stringify(data)); 
-    fetch('/api/meta', { method: 'POST', body: JSON.stringify(data) }).catch(()=>{});
-  } catch { /* quota */ }
-}
-
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    fetch('/api/meta')
-      .then(res => res.json())
-      .then(data => {
-        if (Object.keys(data).length > 0) {
-          localStorage.setItem(INVOICES_KEY, JSON.stringify(data));
-        }
-      })
-      .catch(()=>{});
-  }, 3000);
+  try { localStorage.setItem(INVOICES_KEY, JSON.stringify(data)); } catch { /* quota */ }
 }
 
 export function getInvoiceMeta(invoiceId: string): InvoiceMeta | null {

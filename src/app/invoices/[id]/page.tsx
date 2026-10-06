@@ -18,30 +18,27 @@ import {
 } from '@/lib/accordpay';
 import { approveUsdc, formatUsdc, getUsdcAllowance, getUsdcBalance } from '@/lib/usdc';
 import { getAddress, isAddress } from 'viem';
-import { getExplorerUrl } from '@/lib/arc';
 import { ACCORDPAY_ADDRESS, IS_ACCORDPAY_CONFIGURED, USDC_ADDRESS } from '@/lib/config';
 import InvoiceUtilities from '@/components/InvoiceUtilities';
 import NetworkFeeSelector from '@/components/NetworkFeeSelector';
-import PaymentLinkButton from '@/components/PaymentLinkButton';
 import InvoiceTimeline from '@/components/InvoiceTimeline';
 import { resolveInvoiceStatus } from '@/lib/invoice-status';
 import InvoiceStatusBadge from '@/components/InvoiceStatusBadge';
 import { InlineCompanyName } from '@/components/CompanyName';
 import { getInvoiceMeta, updateInvoiceMeta, notifyInvoiceEvent, type InvoiceMeta } from '@/lib/store';
-import { ShieldCheck, XCircle, AlertCircle, Wallet } from 'lucide-react';
+import { AlertCircle, Wallet } from 'lucide-react';
 
 type TxStatus = 'idle' | 'approving' | 'submitting' | 'confirmed' | 'rejected' | 'failed';
 type InvoiceAction = 'fund' | 'cancel' | 'onChainReject' | 'settleEarly' | 'settleMaturity' | 'payout';
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { status, address, walletClient, publicClient, chainId, switchToArcTestnet } = useWallet();
+  const { status, address, walletClient, publicClient, switchToArcTestnet } = useWallet();
   const [invoice, setInvoice] = useState<OnChainInvoice | null>(null);
   const [meta, setMeta] = useState<InvoiceMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [txStatus, setTxStatus] = useState<TxStatus>('idle');
-  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nowSeconds, setNowSeconds] = useState(() => BigInt(Math.floor(Date.now() / 1_000)));
   const [payoutAddressInput, setPayoutAddressInput] = useState('');
@@ -92,7 +89,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     setError(null);
     setTxStatus('submitting');
     try {
-      let hash: `0x${string}`;
       if (action === 'fund') {
         const balance = await getUsdcBalance(publicClient, USDC_ADDRESS, address);
         if (balance < invoice.fullAmount) {
@@ -117,31 +113,31 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           );
           setTxStatus('submitting');
         }
-        hash = await fundInvoice(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
+        await fundInvoice(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
         
         // Update meta & notify
         notifyInvoiceEvent(invoice.supplier, invoice.id.toString(), 'invoice_funded', 'Payment Secured', `Buyer funded invoice #${invoice.id.toString()}`);
         
       } else if (action === 'cancel') {
-        hash = await cancelInvoice(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
+        await cancelInvoice(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
         updateInvoiceMeta(invoice.id.toString(), { businessStatus: 'cancelled' });
         notifyInvoiceEvent(invoice.supplier, invoice.id.toString(), 'invoice_cancelled', 'Invoice Cancelled', `Buyer cancelled invoice #${invoice.id.toString()}`);
         
       } else if (action === 'onChainReject') {
-        hash = await onChainReject(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
+        await onChainReject(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
         notifyInvoiceEvent(invoice.buyer, invoice.id.toString(), 'invoice_rejected', 'Payment Rejected', `Supplier returned payment for invoice #${invoice.id.toString()}`);
         
       } else if (action === 'payout') {
         if (!isAddress(payoutAddressInput)) throw new Error('Enter a valid payout wallet address.');
-        hash = await updatePayoutAddress(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId, getAddress(payoutAddressInput));
+        await updatePayoutAddress(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId, getAddress(payoutAddressInput));
         setPayoutAddressInput('');
         
       } else if (action === 'settleEarly') {
-        hash = await settleEarly(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
+        await settleEarly(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
         notifyInvoiceEvent(invoice.buyer, invoice.id.toString(), 'early_settlement', 'Early Settlement', `Supplier took early settlement for invoice #${invoice.id.toString()}`);
         
       } else {
-        hash = await settleAtMaturity(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
+        await settleAtMaturity(walletClient, publicClient, ACCORDPAY_ADDRESS, invoiceId);
         const role = address.toLowerCase() === invoice.buyer.toLowerCase() ? 'Buyer' : 'Supplier';
         notifyInvoiceEvent(
           role === 'Buyer' ? invoice.supplier : invoice.buyer, 
@@ -151,7 +147,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           `${role} executed final settlement for invoice #${invoice.id.toString()}`
         );
       }
-      setTxHash(hash);
       setTxStatus('confirmed');
       await loadInvoice();
     } catch (transactionError) {
@@ -181,10 +176,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const s = resolvedStatus.status;
   const canFund = isBuyer && s === 'sent';
   const canCancel = isBuyer && s === 'sent';
-  const canSettleEarly = isSupplier && (s === 'funded' || s === 'in_progress') && !isPastDue;
+  const canSettleEarly = isSupplier && s === 'funded' && !isPastDue;
   const canSettleAtMaturity = (isBuyer || isSupplier) && s === 'overdue' && isPastDue;
-  const canOnchainReject = isSupplier && (s === 'funded' || s === 'in_progress' || s === 'overdue');
-  const canUpdatePayout = isSupplier && (s === 'sent' || s === 'funded' || s === 'in_progress' || s === 'overdue');
+  const canOnchainReject = isSupplier && (s === 'funded' || s === 'overdue');
+  const canUpdatePayout = isSupplier && (s === 'sent' || s === 'funded' || s === 'overdue');
   
   const hasAvailableAction = canFund || canCancel || canOnchainReject || canSettleEarly || canSettleAtMaturity;
 
@@ -278,7 +273,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           <section className="card p-5">
             <h2 className="text-base font-bold mb-4 border-b border-slate-100 pb-2 dark:border-zinc-700">Blockchain Proofs</h2>
             <dl className="space-y-3 text-sm">
-              <div><dt className="text-xs text-slate-500">Invoice Hash</dt><dd><CopyableValue value={invoice.invoiceReferenceHash} label="hash" /></dd></div>
+              <div><dt className="text-xs text-slate-500">Invoice Hash</dt><dd><CopyableValue value={invoice.invoiceReferenceHash} /></dd></div>
             </dl>
           </section>
 
@@ -304,7 +299,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
 // Keep CopyableValue, StateMessage, CountdownTimer same as before
 
-function CopyableValue({ value, label }: { value: string; label: string }) {
+function CopyableValue({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   const compactValue = `${value.slice(0, 10)}…${value.slice(-8)}`;
   async function copyValue() {

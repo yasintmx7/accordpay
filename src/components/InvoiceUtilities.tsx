@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Download, Printer, ExternalLink, Terminal, FileText } from 'lucide-react';
-import { InvoiceStatus, statusLabel, type OnChainInvoice } from '@/lib/accordpay';
+import { InvoiceStatus, type OnChainInvoice } from '@/lib/accordpay';
 import { formatUsdc } from '@/lib/usdc';
 import { ARC_TESTNET_EXPLORER_URL } from '@/lib/config';
 import { useWallet } from '@/lib/wallet';
@@ -85,12 +84,6 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     };
     void fetchHash();
   }, [publicClient, invoice.id]);
-
-  const timeline = [
-    { label: 'Invoice created', description: 'Payment terms agreed', date: invoice.createdAt, txHash: txHashes['InvoiceCreated'] },
-    { label: 'Payment secured', description: 'Funds protected in escrow', date: invoice.fundedAt, txHash: txHashes['InvoiceFunded'] },
-    { label: 'Supplier paid', description: invoice.status === InvoiceStatus.SettledEarly ? 'Early payment completed' : 'Full payment completed', date: invoice.settledAt, txHash: txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity'] },
-  ];
 
   async function downloadReceipt(action: 'download' | 'print' = 'download') {
     const [{ jsPDF }, logoDataUrl] = await Promise.all([
@@ -414,8 +407,6 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
   }
 
   const isSettled = invoice.status === InvoiceStatus.SettledEarly || invoice.status === InvoiceStatus.SettledAtMaturity;
-  const isFunded = invoice.status === InvoiceStatus.Funded;
-
   return (
     <div className="grid gap-6">
       <section className="card overflow-hidden">

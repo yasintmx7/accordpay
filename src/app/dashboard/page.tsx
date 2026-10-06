@@ -102,7 +102,10 @@ export default function DashboardPage() {
   // Metrics calculation based on unified status
   const totalValue = invoices.reduce((acc, i) => acc + i.fullAmount, 0n);
   const totalFunded = invoices.filter(i => resolveInvoiceStatus(i, nowSec).status === 'funded').reduce((acc, i) => acc + i.fullAmount, 0n);
-  const totalInProgress = invoices.filter(i => resolveInvoiceStatus(i, nowSec).status === 'in_progress').reduce((acc, i) => acc + i.fullAmount, 0n);
+  const totalAwaitingSettlement = invoices.filter((invoice) => {
+    const status = resolveInvoiceStatus(invoice, nowSec).status;
+    return status === 'funded' || status === 'overdue';
+  }).reduce((acc, invoice) => acc + invoice.fullAmount, 0n);
   const totalSettled = invoices.filter(i => resolveInvoiceStatus(i, nowSec).status === 'settled').reduce((acc, i) => acc + i.fullAmount, 0n);
   
   const needsAttention = invoices.filter((invoice) => {
@@ -112,7 +115,7 @@ export default function DashboardPage() {
     if (role === 'buyer') {
       return s === 'sent' || s === 'overdue';
     } else {
-      return s === 'funded';
+      return s === 'funded' || s === 'overdue';
     }
   });
 
@@ -133,6 +136,7 @@ export default function DashboardPage() {
       if (s === 'overdue') return { label: 'Settlement ready', icon: <AlertCircle size={16} /> };
     } else {
       if (s === 'funded') return { label: 'Receive early payment', icon: <Clock size={16} /> };
+      if (s === 'overdue') return { label: 'Finalize payment', icon: <AlertCircle size={16} /> };
     }
     return { label: 'View details', icon: <ArrowRight size={16} /> };
   }
@@ -171,7 +175,7 @@ export default function DashboardPage() {
         <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Awaiting Settlement</p>
           <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl dark:text-zinc-100">
-            {loading ? '…' : formatUsdc(totalInProgress)} <span className="text-base font-semibold text-slate-400">USDC</span>
+            {loading ? '…' : formatUsdc(totalAwaitingSettlement)} <span className="text-base font-semibold text-slate-400">USDC</span>
           </p>
         </div>
         

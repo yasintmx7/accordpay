@@ -21,20 +21,20 @@ interface TimelineStep {
 
 /**
  * Visual timeline showing the invoice lifecycle:
- * Draft → Sent → Accepted → Funded → In Progress → Settled
+ * Sent → Funded → Settled
  */
 export default function InvoiceTimeline({ invoice, nowSeconds }: Props) {
   const info = resolveInvoiceStatus(invoice, nowSeconds);
   const meta = getInvoiceMeta(invoice.id.toString());
 
   const statusOrder: UnifiedStatus[] = [
-    'sent', 'funded', 'in_progress', 'settled',
+    'sent', 'funded', 'settled',
   ];
   const currentIndex = statusOrder.indexOf(info.status);
   // For rejected/cancelled/overdue, map to the appropriate position
   const effectiveIndex = info.status === 'rejected' ? 0 : // stops at sent
     info.status === 'cancelled' ? 0 :
-    info.status === 'overdue' ? 2 : // past in_progress
+    info.status === 'overdue' ? 1 :
     currentIndex;
 
   const steps: TimelineStep[] = [
@@ -53,14 +53,6 @@ export default function InvoiceTimeline({ invoice, nowSeconds }: Props) {
       timestamp: invoice.fundedAt > 0n ? Number(invoice.fundedAt) * 1000 : null,
       completed: effectiveIndex >= 1,
       active: info.status === 'funded',
-    },
-    {
-      key: 'in_progress',
-      label: 'In Progress',
-      description: 'Awaiting settlement',
-      timestamp: invoice.fundedAt > 0n ? Number(invoice.fundedAt) * 1000 : null,
-      completed: effectiveIndex >= 2,
-      active: info.status === 'in_progress' || info.status === 'overdue',
     },
     {
       key: 'settled',
