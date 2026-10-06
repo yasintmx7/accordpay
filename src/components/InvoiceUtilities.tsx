@@ -7,6 +7,30 @@ import { formatUsdc } from '@/lib/usdc';
 import { ARC_TESTNET_EXPLORER_URL } from '@/lib/config';
 import { useWallet } from '@/lib/wallet';
 
+let accordPayPdfLogoPromise: Promise<string> | null = null;
+
+function loadAccordPayPdfLogo() {
+  if (!accordPayPdfLogoPromise) {
+    accordPayPdfLogoPromise = fetch('/accordpay-mark-light-compact.png')
+      .then((response) => {
+        if (!response.ok) throw new Error('Could not load the AccordPay PDF logo.');
+        return response.blob();
+      })
+      .then((blob) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error ?? new Error('Could not read the AccordPay PDF logo.'));
+        reader.readAsDataURL(blob);
+      }))
+      .catch((error) => {
+        accordPayPdfLogoPromise = null;
+        throw error;
+      });
+  }
+
+  return accordPayPdfLogoPromise;
+}
+
 export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice }) {
   const { publicClient } = useWallet();
   const [txHashes, setTxHashes] = useState<Record<string, string>>({});
@@ -68,7 +92,10 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
   ];
 
   async function downloadReceipt(action: 'download' | 'print' = 'download') {
-    const { jsPDF } = await import('jspdf');
+    const [{ jsPDF }, logoDataUrl] = await Promise.all([
+      import('jspdf'),
+      loadAccordPayPdfLogo(),
+    ]);
     const doc = new jsPDF({ format: 'a4', unit: 'mm' });
     const { getCompanyProfile, getDisplayName, getInvoiceMeta } = await import('@/lib/store');
     const { resolveInvoiceStatus } = await import('@/lib/invoice-status');
@@ -77,6 +104,38 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     const textMain: [number, number, number] = [15, 23, 42]; // slate-900
     const textMuted: [number, number, number] = [100, 116, 139]; // slate-500
     const line: [number, number, number] = [226, 232, 240]; // slate-200
+
+    const drawPdfHeader = (title: string, reference: string, secondaryReference?: string) => {
+      doc.addImage(logoDataUrl, 'PNG', 20, 17, 8, 8, 'accordpay-mark', 'FAST');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(17);
+      doc.setTextColor(...textMain);
+      doc.text('AccordPay', 31, 22.5);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...textMuted);
+      doc.text('Programmable settlement on Arc', 31, 27.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.setTextColor(...textMain);
+      doc.text(title, 190, 21.5, { align: 'right' });
+
+      doc.setFontSize(9.5);
+      doc.text(reference, 190, 27.5, { align: 'right' });
+      if (secondaryReference) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...textMuted);
+        doc.text(secondaryReference, 190, 32.5, { align: 'right' });
+      }
+
+      doc.setDrawColor(...line);
+      doc.line(20, 38, 190, 38);
+      return 46;
+    };
     
     const isSettledEarly = invoice.status === InvoiceStatus.SettledEarly;
     const isSettledAtMaturity = invoice.status === InvoiceStatus.SettledAtMaturity;
@@ -95,37 +154,22 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     const docHashStr = invoice.descriptionHash;
     const invoiceNum = meta?.invoiceNumber || invoice.id.toString();
 
-    let y = 25;
+    let y = 46;
 
     if (!isSettled) {
       // --- B2B INVOICE ---
       
-      // HEADER
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(...textMain);
-      doc.text('AccordPay', 20, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(...textMuted);
-      doc.text('B2B invoice settlement', 20, y + 6);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(...textMain);
-      doc.text('INVOICE', 190, y, { align: 'right' });
-      doc.setFontSize(10);
-      doc.text(`Invoice #${invoiceNum}`, 190, y + 6, { align: 'right' });
+      y = drawPdfHeader('Invoice', `Invoice #${invoiceNum}`);
       
       // Status Badge
       const statusInfo = resolveInvoiceStatus(invoice, BigInt(Math.floor(Date.now() / 1000)));
       doc.setFontSize(9);
       doc.setTextColor(255, 255, 255);
       doc.setFillColor(79, 70, 229); // indigo-600
-      doc.roundedRect(170, y + 10, 20, 6, 1.5, 1.5, 'F');
-      doc.text(statusInfo.label.toUpperCase(), 180, y + 14.2, { align: 'center' });
+      doc.roundedRect(170, y, 20, 6, 1.5, 1.5, 'F');
+      doc.text(statusInfo.label.toUpperCase(), 180, y + 4.2, { align: 'center' });
 
-      y += 28;
+      y += 12;
       doc.setTextColor(...textMuted);
       doc.setFontSize(10);
       doc.text(`Issued: ${createdDate}`, 20, y);
@@ -233,22 +277,11 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     } else {
       // --- SETTLEMENT RECEIPT ---
       
-      // HEADER
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(...textMain);
-      doc.text('AccordPay', 20, y);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(...textMain);
-      doc.text('SETTLEMENT RECEIPT', 190, y, { align: 'right' });
-      doc.setFontSize(10);
-      doc.text(`Settlement #STL-${invoice.id.toString()}`, 190, y + 6, { align: 'right' });
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Invoice #${invoiceNum}`, 190, y + 11, { align: 'right' });
-
-      y += 20;
+      y = drawPdfHeader(
+        'Settlement Receipt',
+        `Invoice #${invoiceNum}`,
+        `Settlement #STL-${invoice.id.toString()}`,
+      );
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(...textMuted);
@@ -360,11 +393,17 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     }
 
     // FOOTER
-    doc.setFont('helvetica', 'normal');
+    doc.setDrawColor(...line);
+    doc.line(20, 274, 190, 274);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
+    doc.setTextColor(...textMain);
+    doc.text('Generated by AccordPay', 105, 281, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(...textMuted);
-    doc.text('Settlement recorded on Arc Testnet. Generated by AccordPay.', 105, 280, { align: 'center' });
-    doc.text('Testnet transactions have no financial value.', 105, 285, { align: 'center' });
+    doc.text('Programmable settlement on Arc', 105, 285, { align: 'center' });
+    doc.setFontSize(7.5);
+    doc.text('Arc Testnet - Testnet transactions have no financial value.', 105, 289, { align: 'center' });
 
     if (action === 'print') {
       doc.autoPrint();
