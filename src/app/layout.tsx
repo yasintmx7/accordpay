@@ -18,6 +18,11 @@ export const metadata: Metadata = {
     template: "%s | AccordPay",
   },
   description: "Create, secure, and settle B2B invoices with testnet USDC on Arc.",
+  icons: {
+    icon: "/accordpay-logo-dark.png",
+    shortcut: "/accordpay-logo-dark.png",
+    apple: "/accordpay-logo-dark.png",
+  },
 };
 
 export default function RootLayout({
@@ -39,8 +44,25 @@ export default function RootLayout({
                 <div className="flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
                   <div className="flex min-w-0 items-center gap-6">
                     <Link href="/" className="site-logo">
-                      <Image src="/accordpay-mark.svg" alt="" width={38} height={38} className="h-8 w-8 sm:h-[38px] sm:w-[38px]" />
-                      <span className="hidden min-[370px]:inline">AccordPay</span>
+                      <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg">
+                        <Image
+                          src="/accordpay-logo-light.png"
+                          alt=""
+                          fill
+                          sizes="36px"
+                          className="object-cover dark:hidden"
+                          priority
+                        />
+                        <Image
+                          src="/accordpay-logo-dark.png"
+                          alt=""
+                          fill
+                          sizes="36px"
+                          className="hidden object-cover dark:block"
+                          priority
+                        />
+                      </span>
+                      <span className="hidden min-[370px]:inline text-xl font-bold text-slate-950 dark:text-white">AccordPay</span>
                     </Link>
                     <nav className="hidden items-center gap-1 lg:flex">
                       <Link href="/dashboard" className="nav-link">Dashboard</Link>
