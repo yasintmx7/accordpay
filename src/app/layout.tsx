@@ -65,21 +65,21 @@ export default function RootLayout({
                           priority
                         />
                       </span>
-                      <span className="hidden min-[360px]:inline min-[769px]:hidden min-[900px]:inline">AccordPay</span>
+                      <span className="hidden min-[400px]:inline min-[769px]:hidden min-[900px]:inline">AccordPay</span>
                     </Link>
                     <PrimaryNavigation />
                   </div>
                   <div className="header-actions">
                     <HeaderCreateAction />
                     <div className="header-icon-slot hidden min-[769px]:block"><NotificationCenter /></div>
-                    <div className="header-icon-slot hidden min-[769px]:block"><ThemeToggle /></div>
+                    <div className="header-icon-slot"><ThemeToggle /></div>
                     <div className="header-wallet-slot"><WalletButton /></div>
                     <MobileHeaderMenu />
                   </div>
                 </div>
               </div>
             </header>
-              <main id="main-content" className="flex-grow pb-[calc(5rem+env(safe-area-inset-bottom))] min-[769px]:pb-0">
+              <main id="main-content" className="flex-grow">
               {children}
               </main>
               <MobileBottomNav />

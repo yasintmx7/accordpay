@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ExternalLink, Menu } from 'lucide-react';
+import { ExternalLink, Menu, X } from 'lucide-react';
 import { useMobileNavigation } from '@/components/MobileNavigationDrawer';
 
 const primaryItems = [
@@ -76,11 +76,11 @@ export function MobileHeaderMenu() {
       type="button"
       onClick={toggle}
       aria-expanded={open}
-      aria-haspopup="dialog"
-      aria-label={open ? 'Close navigation drawer' : 'Open navigation drawer'}
+      aria-haspopup="menu"
+      aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
       className="header-menu-button min-[769px]:hidden"
     >
-      <Menu size={19} />
+      {open ? <X size={18} /> : <Menu size={19} />}
     </button>
   );
 }
