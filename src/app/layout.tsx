@@ -91,6 +91,8 @@ export default function RootLayout({
                     @accordpay
                   </a>
                   <span className="footer-dot">·</span>
+                  <Link href="/how-it-works" className="footer-link">Documentation</Link>
+                  <span className="footer-dot">·</span>
                   <Link href="/terms" className="footer-link">Terms of Service</Link>
                   <span className="footer-dot">·</span>
                   <Link href="/privacy" className="footer-link">Privacy Policy</Link>

@@ -139,6 +139,7 @@ export default function Home() {
             <p className="home-section-kicker">How it works</p>
             <h2>Three steps to settlement</h2>
             <p>Clear terms for buyers. Flexible timing for suppliers. Settlement enforced onchain.</p>
+            <Link href="/how-it-works" className="home-text-link">Explore the architecture <ArrowRight size={16} /></Link>
           </div>
 
           <div className="home-steps">
