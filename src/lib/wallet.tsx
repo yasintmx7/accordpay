@@ -181,6 +181,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       chain: arcTestnet,
       transport: http(process.env.NEXT_PUBLIC_ARC_RPC_URL || 'https://rpc.testnet.arc.io'),
       batch: { multicall: true },
+      pollingInterval: 5000,
     });
 
     setAddress(accounts[0]);

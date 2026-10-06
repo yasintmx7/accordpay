@@ -108,7 +108,7 @@ async function invoiceIdFromReceipt(
   contractAddress: Address,
   hash: `0x${string}`,
 ): Promise<bigint> {
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 5000 });
   if (receipt.status !== 'success') throw new Error('AccordPay transaction reverted.');
 
   for (const log of receipt.logs) {
@@ -240,7 +240,7 @@ async function writeInvoiceAction(
     chain: walletClient.chain,
     account: walletClient.account!,
   });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 5000 });
   if (receipt.status !== 'success') throw new Error('AccordPay transaction reverted.');
   return hash;
 }

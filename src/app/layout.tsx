@@ -10,6 +10,7 @@ import ReminderWatcher from "@/components/ReminderWatcher";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import PasskeyReconnectBanner from "@/components/PasskeyReconnectBanner";
 import { ToastProvider } from "@/components/ToastProvider";
+import NotificationCenter from "@/components/NotificationCenter";
 
 export const metadata: Metadata = {
   title: {
@@ -44,8 +45,9 @@ export default function RootLayout({
                     <nav className="hidden items-center gap-1 lg:flex">
                       <Link href="/dashboard" className="nav-link">Dashboard</Link>
                       <Link href="/invoices/new" className="nav-link">Create Invoice</Link>
+                      <Link href="/invoices/sent" className="nav-link">Sent</Link>
+                      <Link href="/invoices/received" className="nav-link">Received</Link>
                       <Link href="/bridge" className="nav-link">Crosschain</Link>
-                      <Link href="/payouts" className="nav-link">Payouts</Link>
                       <Link href="/settings" className="nav-link">Settings</Link>
                       <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="nav-link nav-link-external">
                         Faucet
@@ -54,6 +56,7 @@ export default function RootLayout({
                     </nav>
                   </div>
                   <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                    <NotificationCenter />
                     <ThemeToggle />
                     <WalletButton />
                   </div>

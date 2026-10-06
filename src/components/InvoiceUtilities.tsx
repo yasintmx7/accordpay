@@ -67,238 +67,373 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     { label: 'Supplier paid', description: invoice.status === InvoiceStatus.SettledEarly ? 'Early payment completed' : 'Full payment completed', date: invoice.settledAt, txHash: txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity'] },
   ];
 
-  async function downloadReceipt() {
+  async function downloadReceipt(action: 'download' | 'print' = 'download') {
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-    const brand: [number, number, number] = [49, 87, 246];
-    const ink: [number, number, number] = [15, 23, 42];
-    const muted: [number, number, number] = [100, 116, 139];
-    const line: [number, number, number] = [226, 232, 240];
-    const surface: [number, number, number] = [248, 250, 252];
-    const success: [number, number, number] = [5, 150, 105];
-    const warning: [number, number, number] = [217, 119, 6];
-    const danger: [number, number, number] = [220, 38, 38];
+    const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+    const { getCompanyProfile, getDisplayName, getInvoiceMeta } = await import('@/lib/store');
+    const { resolveInvoiceStatus } = await import('@/lib/invoice-status');
 
+    // Colors
+    const textMain: [number, number, number] = [15, 23, 42]; // slate-900
+    const textMuted: [number, number, number] = [100, 116, 139]; // slate-500
+    const line: [number, number, number] = [226, 232, 240]; // slate-200
+    
     const isSettledEarly = invoice.status === InvoiceStatus.SettledEarly;
     const isSettledAtMaturity = invoice.status === InvoiceStatus.SettledAtMaturity;
     const isSettled = isSettledEarly || isSettledAtMaturity;
-    const isFunded = invoice.status === InvoiceStatus.Funded;
-    const isCancelled = invoice.status === InvoiceStatus.Cancelled;
-    const isRejected = invoice.status === InvoiceStatus.Rejected;
-    const documentTitle = isSettled
-      ? 'SETTLEMENT RECEIPT'
-      : isFunded
-        ? 'PAYMENT SECURED CERTIFICATE'
-        : isCancelled || isRejected
-          ? isRejected ? 'REJECTION & REFUND RECORD' : 'CANCELLATION RECORD'
-          : 'INVOICE RECORD';
-    const documentSubtitle = isSettled
-      ? 'Proof of completed supplier payment'
-      : isFunded
-        ? 'Funds are secured in the AccordPay escrow contract'
-        : isCancelled || isRejected
-          ? isRejected ? 'Supplier rejection and escrow refund record' : 'Record of a cancelled invoice'
-          : 'Record of invoice terms before payment is secured';
-    const statusColor = isSettled ? success : isFunded ? brand : isCancelled || isRejected ? danger : warning;
-    const createdDate = new Date(Number(invoice.createdAt) * 1_000);
-    const dueDate = new Date(Number(invoice.dueDate) * 1_000);
 
-    doc.setProperties({
-      title: `${documentTitle} - AccordPay Invoice #${invoice.id.toString()}`,
-      subject: documentSubtitle,
-      author: 'AccordPay',
-      creator: 'AccordPay Document Generator v2',
-    });
+    const createdDate = new Date(Number(invoice.createdAt) * 1_000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    const dueDate = new Date(Number(invoice.dueDate) * 1_000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    
+    // Buyer / Supplier names
+    const buyerName = getDisplayName(invoice.buyer);
+    const supplierName = getDisplayName(invoice.supplier);
+    const buyerProfile = getCompanyProfile(invoice.buyer);
+    const supplierProfile = getCompanyProfile(invoice.supplier);
 
-    doc.setFillColor(...ink);
-    doc.rect(0, 0, 210, 7, 'F');
+    const meta = getInvoiceMeta(invoice.id.toString());
+    const docHashStr = invoice.descriptionHash;
+    const invoiceNum = meta?.invoiceNumber || invoice.id.toString();
 
-    const img = new Image();
-    img.src = '/accordpay-logo.png';
-    await new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
-    if (img.width > 0) {
-      const ratio = img.width / img.height;
-      const h = 9;
-      const w = h * ratio;
-      doc.addImage(img, 'PNG', 18, 18, w, h);
-      if (ratio < 1.5) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(20);
-        doc.setTextColor(...ink);
-        doc.text('AccordPay', 18 + w + 3, 26);
-      }
-    } else {
+    let y = 25;
+
+    if (!isSettled) {
+      // --- B2B INVOICE ---
+      
+      // HEADER
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(20);
-      doc.setTextColor(...ink);
-      doc.text('AccordPay', 18, 26);
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(...ink);
-    doc.text(documentTitle, 192, 22, { align: 'right' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...muted);
-    doc.text(`Document AP-${invoice.id.toString().padStart(6, '0')}`, 192, 28, { align: 'right' });
-
-    doc.setDrawColor(...line);
-    doc.line(18, 38, 192, 38);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(...ink);
-    doc.text(`Invoice #${invoice.id.toString()}`, 18, 51);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...muted);
-    doc.text(documentSubtitle, 18, 58);
-
-    doc.setFillColor(...statusColor);
-    doc.roundedRect(154, 44, 38, 11, 2, 2, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    doc.text(statusLabel(invoice.status).toUpperCase(), 173, 51, { align: 'center' });
-
-    doc.setFillColor(...surface);
-    doc.roundedRect(18, 69, 174, 33, 3, 3, 'F');
-    const summary = [
-      ['INVOICE VALUE', `${formatUsdc(invoice.fullAmount)} USDC`],
-      ['CREATED', createdDate.toLocaleDateString()],
-      ['DUE', dueDate.toLocaleDateString()],
-    ];
-    summary.forEach(([label, value], index) => {
-      const x = 25 + index * 56;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.setTextColor(...muted);
-      doc.text(label, x, 80);
-      doc.setFontSize(index === 0 ? 13 : 10);
-      doc.setTextColor(...ink);
-      doc.text(value, x, 91);
-    });
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...ink);
-    doc.text('BUYER', 18, 116);
-    doc.text('SUPPLIER', 108, 116);
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(...muted);
-    doc.text(doc.splitTextToSize(invoice.buyer, 78), 18, 123);
-    doc.text(doc.splitTextToSize(invoice.supplier, 78), 108, 123);
-    if (invoice.payoutAddress.toLowerCase() !== invoice.supplier.toLowerCase()) {
+      doc.setFontSize(22);
+      doc.setTextColor(...textMain);
+      doc.text('AccordPay', 20, y);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.text(`Payout: ${invoice.payoutAddress}`, 108, 136);
-    }
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('B2B invoice settlement', 20, y + 6);
 
-    doc.setDrawColor(...line);
-    doc.line(18, 141, 192, 141);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...ink);
-    doc.text('Payment terms', 18, 153);
-    doc.setFontSize(9);
-    doc.text('Full invoice amount', 18, 166);
-    doc.text(invoice.dynamicEarlySettlement ? 'Starting early payment' : 'Fixed early payment', 18, 176);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${formatUsdc(invoice.fullAmount)} USDC`, 192, 166, { align: 'right' });
-    doc.text(`${formatUsdc(invoice.earlySettlementAmount)} USDC`, 192, 176, { align: 'right' });
-
-    if (isSettled) {
-      const amountPaid = isSettledEarly ? invoice.earlySettlementAmount : invoice.fullAmount;
-      doc.setFillColor(236, 253, 245);
-      doc.roundedRect(18, 187, 174, 27, 3, 3, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...success);
-      doc.text('AMOUNT PAID TO SUPPLIER', 25, 197);
       doc.setFontSize(16);
-      doc.text(`${formatUsdc(amountPaid)} USDC`, 25, 208);
-      doc.setFontSize(8);
-      doc.text(isSettledEarly ? `Early payment savings: ${formatUsdc(invoice.fullAmount - invoice.earlySettlementAmount)} USDC` : 'Paid in full at maturity', 185, 204, { align: 'right' });
-    } else if (isFunded) {
-      doc.setFillColor(238, 242, 255);
-      doc.roundedRect(18, 187, 174, 27, 3, 3, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...brand);
-      doc.text('AMOUNT SECURED IN ESCROW', 25, 197);
-      doc.setFontSize(16);
-      doc.text(`${formatUsdc(invoice.fullAmount)} USDC`, 25, 208);
-      doc.setFontSize(8);
-      doc.text('Not yet paid to supplier', 185, 204, { align: 'right' });
-    } else {
-      doc.setFillColor(...surface);
-      doc.roundedRect(18, 187, 174, 27, 3, 3, 'F');
-      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...textMain);
+      doc.text('INVOICE', 190, y, { align: 'right' });
+      doc.setFontSize(10);
+      doc.text(`Invoice #${invoiceNum}`, 190, y + 6, { align: 'right' });
+      
+      // Status Badge
+      const statusInfo = resolveInvoiceStatus(invoice, BigInt(Math.floor(Date.now() / 1000)));
       doc.setFontSize(9);
-      doc.setTextColor(...statusColor);
-      doc.text(isRejected ? 'PAYMENT RETURNED TO BUYER' : isCancelled ? 'NO PAYMENT WAS MADE' : 'PAYMENT HAS NOT BEEN SECURED', 25, 203);
+      doc.setTextColor(255, 255, 255);
+      doc.setFillColor(79, 70, 229); // indigo-600
+      doc.roundedRect(170, y + 10, 20, 6, 1.5, 1.5, 'F');
+      doc.text(statusInfo.label.toUpperCase(), 180, y + 14.2, { align: 'center' });
+
+      y += 28;
+      doc.setTextColor(...textMuted);
+      doc.setFontSize(10);
+      doc.text(`Issued: ${createdDate}`, 20, y);
+      doc.text(`Due: ${dueDate}`, 20, y + 6);
+
+      y += 16;
+      // FROM / TO
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 10;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('FROM', 20, y);
+      doc.text('TO', 110, y);
+
+      y += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...textMain);
+      doc.text(buyerName, 20, y);
+      doc.text(supplierName, 110, y);
+      
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      if (buyerProfile?.email) { doc.text(buyerProfile.email, 20, y); }
+      if (supplierProfile?.email) { doc.text(supplierProfile.email, 110, y); }
+      
+      y += 6;
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Wallet: ${invoice.buyer.slice(0, 10)}...${invoice.buyer.slice(-6)}`, 20, y);
+      doc.text(`Wallet: ${invoice.supplier.slice(0, 10)}...${invoice.supplier.slice(-6)}`, 110, y);
+
+      y += 16;
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 10;
+
+      // SUMMARY
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('Description', 20, y);
+      doc.text('Amount', 190, y, { align: 'right' });
+      
+      y += 10;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(...textMain);
+      doc.text(meta?.description || 'Invoice payment', 20, y);
+      doc.text(`${formatUsdc(invoice.fullAmount)} USDC`, 190, y, { align: 'right' });
+
+      y += 16;
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 10;
+
+      // TOTAL
+      doc.setFontSize(11);
+      doc.setTextColor(...textMuted);
+      doc.text('Subtotal', 140, y);
+      doc.setTextColor(...textMain);
+      doc.text(`${formatUsdc(invoice.fullAmount)} USDC`, 190, y, { align: 'right' });
+
+      y += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('Total', 140, y);
+      doc.text(`${formatUsdc(invoice.fullAmount)} USDC`, 190, y, { align: 'right' });
+
+      y += 24;
+
+      // PAYMENT TERMS
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('Payment Terms', 20, y);
+      
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('Payment method: ', 20, y); doc.setTextColor(...textMain); doc.text('USDC on Arc', 60, y); y += 6;
+      doc.setTextColor(...textMuted); doc.text('Payment terms: ', 20, y); doc.setTextColor(...textMain); doc.text(`Due ${dueDate}`, 60, y); y += 6;
+      doc.setTextColor(...textMuted); doc.text('Early settlement: ', 20, y); doc.setTextColor(...textMain); doc.text('Available', 60, y); y += 6;
+      doc.setTextColor(...textMuted); doc.text('Early amount: ', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(invoice.earlySettlementAmount)} USDC`, 60, y);
+      
+      y += 20;
+      // BLOCKCHAIN VERIFICATION
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('Blockchain Verification', 20, y);
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...textMuted);
+      doc.text(`Network: Arc Testnet`, 20, y); y += 6;
+      doc.text(`Contract: ${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS || ''}`, 20, y); y += 6;
+      doc.text(`Reference hash: ${invoice.invoiceReferenceHash.slice(0, 20)}...`, 20, y); y += 6;
+      doc.text(`Document hash: ${docHashStr.slice(0, 20)}...`, 20, y);
+
+    } else {
+      // --- SETTLEMENT RECEIPT ---
+      
+      // HEADER
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(...textMain);
+      doc.text('AccordPay', 20, y);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(...textMain);
+      doc.text('SETTLEMENT RECEIPT', 190, y, { align: 'right' });
+      doc.setFontSize(10);
+      doc.text(`Settlement #STL-${invoice.id.toString()}`, 190, y + 6, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Invoice #${invoiceNum}`, 190, y + 11, { align: 'right' });
+
+      y += 20;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('STATUS', 20, y);
+      doc.text('SETTLEMENT DATE', 80, y);
+      
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(5, 150, 105); // emerald-600
+      doc.text(isSettledEarly ? 'SETTLED EARLY' : 'SETTLED AT MATURITY', 20, y);
+      doc.setTextColor(...textMain);
+      const settledDate = new Date(Number(invoice.settledAt) * 1_000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      doc.text(settledDate, 80, y);
+
+      y += 15;
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 15;
+
+      // PAYMENT RESULT
+      const amountPaid = isSettledEarly ? invoice.earlySettlementAmount : invoice.fullAmount;
+      const discount = invoice.fullAmount - invoice.earlySettlementAmount;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...textMuted);
+      doc.text('AMOUNT PAID TO SUPPLIER', 20, y);
+      
+      y += 14;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(32);
+      doc.setTextColor(...textMain);
+      doc.text(`${formatUsdc(amountPaid)} USDC`, 20, y);
+
+      y += 18;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...textMuted);
+      doc.text('Original invoice amount', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(invoice.fullAmount)} USDC`, 90, y, { align: 'right' }); y += 7;
+      doc.setTextColor(...textMuted); doc.text('Early settlement discount', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(discount)} USDC`, 90, y, { align: 'right' }); y += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...textMuted); doc.text('Supplier received', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(amountPaid)} USDC`, 90, y, { align: 'right' });
+      
+      y += 15;
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 12;
+
+      // PARTIES
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('BUYER', 20, y);
+      doc.text('SUPPLIER', 110, y);
+
+      y += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...textMain);
+      doc.text(buyerName, 20, y);
+      doc.text(supplierName, 110, y);
+      
+      y += 6;
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...textMuted);
+      doc.text(`Wallet: ${invoice.buyer.slice(0, 10)}...${invoice.buyer.slice(-6)}`, 20, y);
+      doc.text(`Wallet: ${invoice.supplier.slice(0, 10)}...${invoice.supplier.slice(-6)}`, 110, y);
+
+      y += 15;
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 12;
+
+      // INVOICE INFORMATION
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...textMain);
+      doc.text('Invoice Information', 20, y);
+      
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...textMuted);
+      doc.text('Issue date: ', 20, y); doc.setTextColor(...textMain); doc.text(createdDate, 60, y); 
+      doc.setTextColor(...textMuted); doc.text('Due date: ', 110, y); doc.setTextColor(...textMain); doc.text(dueDate, 140, y); y += 7;
+      doc.setTextColor(...textMuted); doc.text('Payment method: ', 20, y); doc.setTextColor(...textMain); doc.text('USDC on Arc', 60, y);
+
+      y += 15;
+      doc.setDrawColor(...line);
+      doc.line(20, y, 190, y);
+      y += 12;
+
+      // BLOCKCHAIN VERIFICATION
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...textMain);
+      doc.text('Blockchain Verification', 20, y);
+      
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...textMuted);
+      doc.text('Network: ', 20, y); doc.setTextColor(...textMain); doc.text('Arc Testnet', 60, y); y += 6;
+      doc.setTextColor(...textMuted); doc.text('Funding tx: ', 20, y); doc.setTextColor(...textMain); doc.text(txHashes['InvoiceFunded'] ? `${txHashes['InvoiceFunded'].slice(0, 15)}...` : 'Unknown', 60, y); y += 6;
+      doc.setTextColor(...textMuted); doc.text('Settlement tx: ', 20, y); doc.setTextColor(...textMain); doc.text((txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity']) ? `${(txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity']).slice(0, 15)}...` : 'Unknown', 60, y); y += 6;
+      doc.setTextColor(...textMuted); doc.text('Contract: ', 20, y); doc.setTextColor(...textMain); doc.text(`${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS || ''}`, 60, y);
     }
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...ink);
-    doc.text('On-chain verification', 18, 230);
+    // FOOTER
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(...muted);
-    const contract = process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS ?? 'Not configured';
-    doc.text('NETWORK', 18, 240);
-    doc.text('Arc Testnet', 48, 240);
-    doc.text('CONTRACT', 18, 248);
-    doc.setFont('courier', 'normal');
-    doc.text(contract, 48, 248);
-    doc.setFont('helvetica', 'normal');
-    doc.text('REFERENCE HASH', 18, 256);
-    doc.setFont('courier', 'normal');
-    doc.text(invoice.invoiceReferenceHash, 48, 256);
-    if (invoice.settledAt > 0n) {
-      doc.setFont('helvetica', 'normal');
-      doc.text('SETTLED', 18, 264);
-      doc.text(new Date(Number(invoice.settledAt) * 1_000).toLocaleString(), 48, 264);
-    } else if (invoice.fundedAt > 0n) {
-      doc.setFont('helvetica', 'normal');
-      doc.text('SECURED', 18, 264);
-      doc.text(new Date(Number(invoice.fundedAt) * 1_000).toLocaleString(), 48, 264);
+    doc.setFontSize(8);
+    doc.setTextColor(...textMuted);
+    doc.text('Settlement recorded on Arc Testnet. Generated by AccordPay.', 105, 280, { align: 'center' });
+    doc.text('Testnet transactions have no financial value.', 105, 285, { align: 'center' });
+
+    if (action === 'print') {
+      doc.autoPrint();
+      window.open(doc.output('bloburl'), '_blank');
+    } else {
+      const fileKind = isSettled ? 'settlement-receipt' : 'b2b-invoice';
+      doc.save(`accordpay-${fileKind}-${invoice.id}.pdf`);
     }
-
-    doc.setDrawColor(...line);
-    doc.line(18, 275, 192, 275);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(...muted);
-    doc.text('Generated from the current AccordPay on-chain record.', 18, 282);
-    doc.text('ARC TESTNET ONLY - TESTNET USDC HAS NO FINANCIAL VALUE', 192, 282, { align: 'right' });
-    doc.text('AccordPay is unaudited. Verify all details against the contract record before relying on this document.', 105, 288, { align: 'center' });
-
-    const fileKind = isSettled ? 'settlement-receipt' : isFunded ? 'payment-secured' : isRejected ? 'rejection-refund-record' : isCancelled ? 'cancellation-record' : 'invoice-record';
-    const filename = `accordpay-v2-${fileKind}-${invoice.id}.pdf`;
-    doc.save(filename);
   }
 
-  const downloadLabel = invoice.status === InvoiceStatus.SettledEarly || invoice.status === InvoiceStatus.SettledAtMaturity
-    ? 'Download settlement receipt'
-    : invoice.status === InvoiceStatus.Funded
-      ? 'Download payment certificate'
-      : invoice.status === InvoiceStatus.Rejected
-        ? 'Download rejection and refund record'
-        : invoice.status === InvoiceStatus.Cancelled
-          ? 'Download cancellation record'
-        : 'Download invoice record';
+  const isSettled = invoice.status === InvoiceStatus.SettledEarly || invoice.status === InvoiceStatus.SettledAtMaturity;
+  const isFunded = invoice.status === InvoiceStatus.Funded;
 
-  return <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-    <section className="card p-5 sm:p-6"><h2 className="section-title">Payment progress</h2><ol className="space-y-5">{timeline.map((item, index) => {
-      const complete = item.date > 0n;
-      return <li key={`${item.label}-${index}`} className="relative flex gap-4"><div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${complete ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-400 dark:bg-zinc-700 dark:text-zinc-500'}`}>{complete ? '✓' : index + 1}</div><div><p className={`font-semibold ${complete ? 'text-slate-900 dark:text-zinc-100' : 'text-slate-400 dark:text-zinc-500'}`}>{item.label}</p><p className="mt-0.5 text-xs text-slate-500">{item.description} {complete ? `· ${new Date(Number(item.date) * 1_000).toLocaleString()}` : '· Pending'}</p>{item.txHash && <a href={`${ARC_TESTNET_EXPLORER_URL}/tx/${item.txHash}`} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">View payment proof ↗</a>}</div></li>;
-    })}</ol></section>
-    <section className="card p-5 sm:p-6"><h2 className="section-title">Documents and proof</h2><div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30"><p className="font-semibold text-emerald-800 dark:text-emerald-400">Invoice record verified</p><p className="mt-1 text-sm leading-5 text-emerald-700 dark:text-emerald-500">The invoice details match the permanent record on Arc Testnet.</p></div><div className="mt-4 space-y-3"><button type="button" onClick={downloadReceipt} className="button-secondary w-full">{downloadLabel}</button>{invoice.status === InvoiceStatus.Created && <Link href={`/bridge?invoice=${invoice.id}`} className="button-primary w-full">Fund from another chain</Link>}<Link href="/payouts" className="button-secondary w-full">Payment preferences</Link><details className="rounded-xl border border-slate-200 dark:border-zinc-700"><summary className="cursor-pointer px-4 py-3 text-center text-sm font-semibold text-slate-600 dark:text-zinc-300">View technical verification</summary><div className="border-t border-slate-200 p-4 text-xs leading-5 text-slate-500 dark:border-zinc-700"><p>Contract-backed record on Arc Testnet.</p><a className="mt-2 inline-block font-semibold text-indigo-600 hover:underline dark:text-indigo-400" target="_blank" rel="noreferrer" href={`${ARC_TESTNET_EXPLORER_URL}/address/${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS ?? ''}`}>Open contract record ↗</a></div></details></div><p className="mt-4 text-xs leading-5 text-slate-500">Documents are generated from the current on-chain record.</p></section>
+  return <div className="grid gap-6">
+    <section className="card p-5 sm:p-6">
+      <h2 className="section-title">{isSettled ? 'Settlement Documents' : 'Invoice Documents'}</h2>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+        <p className="font-semibold text-emerald-800 dark:text-emerald-400">On-chain verification complete</p>
+        <p className="mt-1 text-sm leading-5 text-emerald-700 dark:text-emerald-500">
+          The document details match the permanent contract record on Arc Testnet.
+        </p>
+      </div>
+      
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button type="button" onClick={() => downloadReceipt('download')} className="button-secondary w-full">
+          Download PDF
+        </button>
+        <button type="button" onClick={() => downloadReceipt('print')} className="button-secondary w-full">
+          Print Document
+        </button>
+      </div>
+      
+      <div className="mt-3">
+        {(() => {
+          const latestTx = txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity'] || txHashes['InvoiceFunded'] || txHashes['InvoiceCreated'];
+          const explorerLink = latestTx 
+            ? `${ARC_TESTNET_EXPLORER_URL}/tx/${latestTx}`
+            : `${ARC_TESTNET_EXPLORER_URL}/address/${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS ?? ''}`;
+            
+          return (
+            <a 
+              href={explorerLink}
+              target="_blank" 
+              rel="noreferrer" 
+              className="button-secondary w-full flex items-center justify-center gap-2"
+            >
+              View on ArcScan ↗
+            </a>
+          );
+        })()}
+      </div>
+
+      <div className="mt-5">
+        <details className="rounded-xl border border-slate-200 dark:border-zinc-700">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+            View technical details
+          </summary>
+          <div className="border-t border-slate-200 p-4 text-xs leading-5 text-slate-500 dark:border-zinc-700 font-mono">
+            <p className="mb-2 text-slate-700 font-bold dark:text-zinc-300 font-sans">Raw Blockchain Identifiers</p>
+            <p><strong>Contract:</strong> <br/> {process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS}</p>
+            <p className="mt-2"><strong>Reference Hash:</strong> <br/> {invoice.invoiceReferenceHash}</p>
+            <p className="mt-2"><strong>Document Hash:</strong> <br/> {invoice.descriptionHash}</p>
+          </div>
+        </details>
+      </div>
+      
+      <p className="mt-5 text-xs leading-5 text-slate-500">
+        Documents are securely generated in your browser from current on-chain data.
+      </p>
+    </section>
   </div>;
 }
