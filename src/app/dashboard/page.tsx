@@ -154,11 +154,9 @@ export default function DashboardPage() {
             {invoices.length} {invoices.length === 1 ? 'invoice' : 'invoices'} total · {needsAttention.length} requiring action
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-          <Link href="/invoices/new" className="button-primary col-span-2 sm:col-span-1 shadow-indigo-500/20 shadow-lg">Create Invoice</Link>
-          <Link href="/invoices/sent" className="button-secondary">Sent</Link>
-          <Link href="/invoices/received" className="button-secondary">Received</Link>
-        </div>
+        <Link href="/invoices/new" className="button-primary shadow-lg shadow-indigo-500/20">
+          Create Invoice
+        </Link>
       </div>
 
       {/* Metrics Grid - Premium styling */}
@@ -235,10 +233,10 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Recent Activity Table */}
+      {/* Recent invoices */}
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">Recent Activity</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">Recent invoices</h2>
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
           {loading ? (
@@ -301,9 +299,6 @@ export default function DashboardPage() {
                   ))}
                 </tbody>
               </table>
-              <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-3 text-center dark:border-zinc-700 dark:bg-zinc-900/20">
-                <Link href="/invoices/sent" className="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400">View all invoices →</Link>
-              </div>
             </div>
           )}
         </div>
