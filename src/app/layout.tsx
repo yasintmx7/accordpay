@@ -12,6 +12,7 @@ import PasskeyReconnectBanner from "@/components/PasskeyReconnectBanner";
 import { ToastProvider } from "@/components/ToastProvider";
 import NotificationCenter from "@/components/NotificationCenter";
 import { HeaderCreateAction, MobileHeaderMenu, PrimaryNavigation } from "@/components/HeaderNavigation";
+import { MobileNavigationProvider } from "@/components/MobileNavigationDrawer";
 
 export const metadata: Metadata = {
   title: {
@@ -40,10 +41,11 @@ export default function RootLayout({
             <ReminderWatcher />
             <PasskeyReconnectBanner />
             <ToastProvider />
-            <header className="site-header">
+            <MobileNavigationProvider>
+              <header className="site-header">
               <div className="header-shell">
-                <div className="relative flex h-16 items-center justify-between gap-3 sm:h-[68px]">
-                  <div className="flex min-w-0 self-stretch items-center gap-6 xl:gap-8">
+                <div className="relative flex h-[60px] items-center justify-between gap-3 min-[769px]:h-[68px]">
+                  <div className="flex min-w-0 self-stretch items-center gap-3 min-[1000px]:gap-6 xl:gap-8">
                     <Link href="/" className="site-logo" aria-label="AccordPay home">
                       <span className="relative h-[30px] w-[30px] shrink-0">
                         <Image
@@ -63,25 +65,25 @@ export default function RootLayout({
                           priority
                         />
                       </span>
-                      <span className="hidden min-[400px]:inline">AccordPay</span>
+                      <span className="hidden min-[360px]:inline min-[769px]:hidden min-[900px]:inline">AccordPay</span>
                     </Link>
                     <PrimaryNavigation />
                   </div>
                   <div className="header-actions">
                     <HeaderCreateAction />
-                    <div className="header-icon-slot"><NotificationCenter /></div>
-                    <div className="header-icon-slot"><ThemeToggle /></div>
+                    <div className="header-icon-slot hidden min-[769px]:block"><NotificationCenter /></div>
+                    <div className="header-icon-slot hidden min-[769px]:block"><ThemeToggle /></div>
                     <div className="header-wallet-slot"><WalletButton /></div>
                     <MobileHeaderMenu />
                   </div>
                 </div>
               </div>
             </header>
-            <main id="main-content" className="flex-grow pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+              <main id="main-content" className="flex-grow pb-[calc(5rem+env(safe-area-inset-bottom))] min-[769px]:pb-0">
               {children}
-            </main>
-            <MobileBottomNav />
-            <footer className="site-footer">
+              </main>
+              <MobileBottomNav />
+              <footer className="site-footer">
               <div className="page-shell flex flex-col items-center gap-5 text-center">
                 <div className="flex flex-wrap justify-center gap-3 sm:gap-1">
                   <a href="https://twitter.com/accordpay" target="_blank" rel="noreferrer" className="footer-link">
@@ -97,7 +99,8 @@ export default function RootLayout({
                   &copy; 2026 AccordPay &mdash; Arc Testnet only &mdash; Unaudited. Testnet USDC has no financial value.
                 </div>
               </div>
-            </footer>
+              </footer>
+            </MobileNavigationProvider>
           </WalletProvider>
         </ThemeProvider>
       </body>

@@ -2125,20 +2125,95 @@ summary {
   color: #c7d2fe;
 }
 
-@media (min-width: 640px) {
+.mobile-drawer-row {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.625rem;
+  padding-inline: 0.625rem;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 550;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mobile-drawer-row:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.mobile-drawer-row-icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.5rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.dark .mobile-drawer-row {
+  color: #d4d4d8;
+}
+
+.dark .mobile-drawer-row:hover {
+  background: #18181b;
+  color: #fafafa;
+}
+
+.dark .mobile-drawer-row-icon {
+  background: #27272a;
+  color: #a1a1aa;
+}
+
+@media (min-width: 900px) {
   .header-create-button {
     display: inline-flex;
   }
 }
 
-@media (max-width: 639px) {
+@media (min-width: 769px) and (max-width: 999px) {
   .header-shell {
-    padding-inline: 0.75rem;
+    padding-inline: 1rem;
+  }
+
+  .nav-link {
+    padding-inline: 0.38rem;
+  }
+
+  .nav-link::after {
+    right: 0.38rem;
+    left: 0.38rem;
   }
 
   .header-actions {
     gap: 0.375rem;
   }
+}
+
+@media (min-width: 769px) {
+  .header-menu-button {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-shell {
+    padding-inline: 1rem;
+  }
+
+  .header-actions {
+    gap: 0.375rem;
+  }
+}
+
+@media (max-width: 639px) {
 
   .header-wallet-slot > a,
   .header-wallet-slot > button,
@@ -2238,7 +2313,13 @@ summary {
 
   .home-title {
     font-size: clamp(2.65rem, 12.5vw, 3.2rem);
+    line-height: 1.02;
     letter-spacing: -0.052em;
+  }
+
+  .home-kicker {
+    padding: 0.38rem 0.65rem;
+    font-size: 0.7rem;
   }
 
   .home-lead {
@@ -2254,6 +2335,7 @@ summary {
 
   .home-primary-cta,
   .home-secondary-cta {
+    min-height: 2.875rem;
     width: 100%;
   }
 
@@ -2301,6 +2383,11 @@ summary {
   .page-shell {
     padding-left: 0.875rem;
     padding-right: 0.875rem;
+  }
+
+  .home-page .page-shell {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
   .page-shell[class*="py-8"],
