@@ -13,8 +13,26 @@ const primaryItems = [
   { href: '/settings', label: 'Settings' },
 ];
 
+const routesWithHeaderCreateAction = ['/bridge', '/settings', '/payouts'];
+
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function shouldShowHeaderCreateAction(pathname: string) {
+  return routesWithHeaderCreateAction.some((route) => isActivePath(pathname, route));
+}
+
+export function HeaderCreateAction() {
+  const pathname = usePathname();
+
+  if (!shouldShowHeaderCreateAction(pathname)) return null;
+
+  return (
+    <Link href="/invoices/new" className="header-create-button">
+      Create Invoice
+    </Link>
+  );
 }
 
 export function PrimaryNavigation() {
@@ -54,6 +72,7 @@ export function MobileHeaderMenu() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const showCreateAction = shouldShowHeaderCreateAction(pathname);
 
   useEffect(() => {
     if (!open) return;
@@ -92,11 +111,15 @@ export function MobileHeaderMenu() {
           aria-label="Mobile navigation"
           className="absolute right-0 top-full mt-2 w-[min(19rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_48px_rgba(15,23,42,0.14)] dark:border-zinc-700 dark:bg-zinc-900"
         >
-          <Link href="/invoices/new" role="menuitem" onClick={() => setOpen(false)} className="header-mobile-create">
-            <Plus size={17} />
-            Create Invoice
-          </Link>
-          <div className="my-2 h-px bg-slate-100 dark:bg-zinc-800" />
+          {showCreateAction && (
+            <>
+              <Link href="/invoices/new" role="menuitem" onClick={() => setOpen(false)} className="header-mobile-create">
+                <Plus size={17} />
+                Create Invoice
+              </Link>
+              <div className="my-2 h-px bg-slate-100 dark:bg-zinc-800" />
+            </>
+          )}
           {primaryItems.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (

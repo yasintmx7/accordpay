@@ -11,7 +11,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PasskeyReconnectBanner from "@/components/PasskeyReconnectBanner";
 import { ToastProvider } from "@/components/ToastProvider";
 import NotificationCenter from "@/components/NotificationCenter";
-import { MobileHeaderMenu, PrimaryNavigation } from "@/components/HeaderNavigation";
+import { HeaderCreateAction, MobileHeaderMenu, PrimaryNavigation } from "@/components/HeaderNavigation";
 
 export const metadata: Metadata = {
   title: {
@@ -68,9 +68,7 @@ export default function RootLayout({
                     <PrimaryNavigation />
                   </div>
                   <div className="header-actions">
-                    <Link href="/invoices/new" className="header-create-button">
-                      Create Invoice
-                    </Link>
+                    <HeaderCreateAction />
                     <div className="header-icon-slot"><NotificationCenter /></div>
                     <div className="header-icon-slot"><ThemeToggle /></div>
                     <div className="header-wallet-slot"><WalletButton /></div>
