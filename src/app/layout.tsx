@@ -11,6 +11,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PasskeyReconnectBanner from "@/components/PasskeyReconnectBanner";
 import { ToastProvider } from "@/components/ToastProvider";
 import NotificationCenter from "@/components/NotificationCenter";
+import { MobileHeaderMenu, PrimaryNavigation } from "@/components/HeaderNavigation";
 
 export const metadata: Metadata = {
   title: {
@@ -40,16 +41,16 @@ export default function RootLayout({
             <PasskeyReconnectBanner />
             <ToastProvider />
             <header className="site-header">
-              <div className="page-shell">
-                <div className="flex h-16 items-center justify-between gap-2 sm:h-[72px] sm:gap-3">
-                  <div className="flex min-w-0 items-center gap-5 xl:gap-7">
-                    <Link href="/" className="site-logo">
-                      <span className="relative h-8 w-8 shrink-0">
+              <div className="header-shell">
+                <div className="relative flex h-16 items-center justify-between gap-3 sm:h-[68px]">
+                  <div className="flex min-w-0 self-stretch items-center gap-6 xl:gap-8">
+                    <Link href="/" className="site-logo" aria-label="AccordPay home">
+                      <span className="relative h-[30px] w-[30px] shrink-0">
                         <Image
                           src="/accordpay-mark-light-compact.png"
                           alt=""
                           fill
-                          sizes="32px"
+                          sizes="30px"
                           className="object-contain dark:hidden"
                           priority
                         />
@@ -57,30 +58,23 @@ export default function RootLayout({
                           src="/accordpay-mark-dark-compact.png"
                           alt=""
                           fill
-                          sizes="32px"
+                          sizes="30px"
                           className="hidden object-contain dark:block"
                           priority
                         />
                       </span>
-                      <span className="hidden min-[370px]:inline">AccordPay</span>
+                      <span className="hidden min-[400px]:inline">AccordPay</span>
                     </Link>
-                    <nav className="hidden items-center gap-1 lg:flex">
-                      <Link href="/dashboard" className="nav-link">Dashboard</Link>
-                      <Link href="/invoices/new" className="nav-link">Create Invoice</Link>
-                      <Link href="/invoices/sent" className="nav-link">Sent</Link>
-                      <Link href="/invoices/received" className="nav-link">Received</Link>
-                      <Link href="/bridge" className="nav-link">Crosschain</Link>
-                      <Link href="/settings" className="nav-link">Settings</Link>
-                      <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="nav-link nav-link-external">
-                        Faucet
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                      </a>
-                    </nav>
+                    <PrimaryNavigation />
                   </div>
-                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                    <NotificationCenter />
-                    <ThemeToggle />
-                    <WalletButton />
+                  <div className="header-actions">
+                    <Link href="/invoices/new" className="header-create-button">
+                      Create Invoice
+                    </Link>
+                    <div className="header-icon-slot"><NotificationCenter /></div>
+                    <div className="header-icon-slot"><ThemeToggle /></div>
+                    <div className="header-wallet-slot"><WalletButton /></div>
+                    <MobileHeaderMenu />
                   </div>
                 </div>
               </div>
