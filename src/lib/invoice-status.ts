@@ -13,9 +13,7 @@ import { InvoiceStatus, type OnChainInvoice } from './accordpay';
 import { getInvoiceMeta, type BusinessStatus } from './store';
 
 export type UnifiedStatus =
-  | 'draft'
   | 'sent'
-  | 'accepted'
   | 'rejected'
   | 'cancelled'
   | 'funded'
@@ -31,9 +29,7 @@ export interface StatusInfo {
 }
 
 const STATUS_MAP: Record<UnifiedStatus, StatusInfo> = {
-  draft:       { status: 'draft',       label: 'Draft',         variant: 'neutral',  description: 'Invoice created, not yet sent to supplier' },
-  sent:        { status: 'sent',        label: 'Sent',          variant: 'pending',  description: 'Waiting for supplier to review and accept' },
-  accepted:    { status: 'accepted',    label: 'Accepted',      variant: 'info',     description: 'Supplier accepted, ready for funding' },
+  sent:        { status: 'sent',        label: 'Sent',          variant: 'pending',  description: 'Invoice sent, waiting for buyer to fund' },
   rejected:    { status: 'rejected',    label: 'Rejected',      variant: 'danger',   description: 'Supplier rejected the invoice terms' },
   cancelled:   { status: 'cancelled',   label: 'Cancelled',     variant: 'danger',   description: 'Invoice has been cancelled' },
   funded:      { status: 'funded',      label: 'Funded',        variant: 'info',     description: 'Payment secured in escrow on-chain' },
@@ -69,22 +65,16 @@ export function resolveInvoiceStatus(
   }
 
   // ── Created on-chain but not yet funded ──
-  // Check application-level business status
   if (invoice.status === InvoiceStatus.Created) {
     if (meta) {
-      if (meta.acceptance?.status === 'rejected') return STATUS_MAP.rejected;
-      if (meta.acceptance?.status === 'accepted') return STATUS_MAP.accepted;
-      if (meta.businessStatus === 'sent') return STATUS_MAP.sent;
+      if (meta.businessStatus === 'rejected') return STATUS_MAP.rejected;
       if (meta.businessStatus === 'cancelled') return STATUS_MAP.cancelled;
     }
-    // Existing on-chain invoice with no app metadata → treat as "sent"
-    // (it was created on-chain, so the supplier can see it)
-    if (!meta) return STATUS_MAP.sent;
-    return STATUS_MAP.draft;
+    return STATUS_MAP.sent;
   }
 
   // Fallback
-  return STATUS_MAP.draft;
+  return STATUS_MAP.sent;
 }
 
 export function getStatusInfo(status: UnifiedStatus): StatusInfo {
@@ -103,9 +93,9 @@ export function statusVariant(status: UnifiedStatus): string {
  */
 export function businessToUnified(biz: BusinessStatus): UnifiedStatus {
   switch (biz) {
-    case 'draft': return 'draft';
+    case 'draft': return 'sent';
     case 'sent': return 'sent';
-    case 'accepted': return 'accepted';
+    case 'accepted': return 'sent';
     case 'rejected': return 'rejected';
     case 'cancelled': return 'cancelled';
   }

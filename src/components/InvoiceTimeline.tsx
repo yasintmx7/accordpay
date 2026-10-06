@@ -28,46 +28,30 @@ export default function InvoiceTimeline({ invoice, nowSeconds }: Props) {
   const meta = getInvoiceMeta(invoice.id.toString());
 
   const statusOrder: UnifiedStatus[] = [
-    'draft', 'sent', 'accepted', 'funded', 'in_progress', 'settled',
+    'sent', 'funded', 'in_progress', 'settled',
   ];
   const currentIndex = statusOrder.indexOf(info.status);
   // For rejected/cancelled/overdue, map to the appropriate position
-  const effectiveIndex = info.status === 'rejected' ? 2 : // stops at accepted stage
+  const effectiveIndex = info.status === 'rejected' ? 0 : // stops at sent
     info.status === 'cancelled' ? 0 :
-    info.status === 'overdue' ? 4 : // past in_progress
+    info.status === 'overdue' ? 2 : // past in_progress
     currentIndex;
 
   const steps: TimelineStep[] = [
     {
-      key: 'draft',
-      label: 'Created',
-      description: 'Invoice drafted',
-      timestamp: meta?.createdAt || Number(invoice.createdAt) * 1000,
-      completed: effectiveIndex >= 0,
-      active: info.status === 'draft',
-    },
-    {
       key: 'sent',
-      label: 'Sent',
-      description: 'Sent to supplier',
-      timestamp: meta?.sentAt || null,
-      completed: effectiveIndex >= 1,
-      active: info.status === 'sent',
-    },
-    {
-      key: 'accepted',
-      label: info.status === 'rejected' ? 'Rejected' : 'Accepted',
-      description: info.status === 'rejected' ? 'Supplier rejected' : 'Supplier accepted',
-      timestamp: meta?.acceptance?.timestamp || null,
-      completed: effectiveIndex >= 2 || info.status === 'rejected',
-      active: info.status === 'accepted' || info.status === 'rejected',
+      label: info.status === 'rejected' ? 'Rejected' : 'Created & Sent',
+      description: info.status === 'rejected' ? 'Supplier rejected' : 'Invoice created and sent',
+      timestamp: meta?.createdAt || Number(invoice.createdAt) * 1000,
+      completed: effectiveIndex >= 0 || info.status === 'rejected',
+      active: info.status === 'sent' || info.status === 'rejected',
     },
     {
       key: 'funded',
       label: 'Funded',
       description: 'Payment secured on-chain',
       timestamp: invoice.fundedAt > 0n ? Number(invoice.fundedAt) * 1000 : null,
-      completed: effectiveIndex >= 3,
+      completed: effectiveIndex >= 1,
       active: info.status === 'funded',
     },
     {
@@ -75,7 +59,7 @@ export default function InvoiceTimeline({ invoice, nowSeconds }: Props) {
       label: 'In Progress',
       description: 'Awaiting settlement',
       timestamp: invoice.fundedAt > 0n ? Number(invoice.fundedAt) * 1000 : null,
-      completed: effectiveIndex >= 4,
+      completed: effectiveIndex >= 2,
       active: info.status === 'in_progress' || info.status === 'overdue',
     },
     {
@@ -92,7 +76,7 @@ export default function InvoiceTimeline({ invoice, nowSeconds }: Props) {
     <div className="space-y-1">
       {steps.map((step, index) => {
         const isLast = index === steps.length - 1;
-        const isRejected = step.key === 'accepted' && info.status === 'rejected';
+        const isRejected = step.key === 'sent' && info.status === 'rejected';
 
         return (
           <div key={step.key} className="flex gap-3">

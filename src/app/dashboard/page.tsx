@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/lib/wallet';
-import { currentEarlySettlementAmount, formatTransactionError, getInvoiceIdsByBuyer, getInvoiceIdsBySupplier, getInvoice, type OnChainInvoice, InvoiceStatus } from '@/lib/accordpay';
+import { formatTransactionError, getInvoiceIdsByBuyer, getInvoiceIdsBySupplier, getInvoice, type OnChainInvoice } from '@/lib/accordpay';
 import { formatUsdc } from '@/lib/usdc';
 import { ACCORDPAY_ADDRESS } from '@/lib/config';
-import { CircleAlert, Rocket, Unplug, ArrowRight, Wallet, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { CircleAlert, Rocket, Unplug, ArrowRight, Wallet, AlertCircle, Clock, FileText } from 'lucide-react';
 import { resolveInvoiceStatus } from '@/lib/invoice-status';
 import InvoiceStatusBadge from '@/components/InvoiceStatusBadge';
 import { InlineCompanyName } from '@/components/CompanyName';
@@ -100,11 +100,6 @@ export default function DashboardPage() {
   if (!CONTRACT) return <NotConfiguredPrompt />;
 
   // Metrics calculation based on unified status
-  const activeCount = invoices.filter(i => {
-    const s = resolveInvoiceStatus(i, nowSec).status;
-    return s !== 'settled' && s !== 'cancelled' && s !== 'rejected';
-  }).length;
-
   const totalValue = invoices.reduce((acc, i) => acc + i.fullAmount, 0n);
   const totalFunded = invoices.filter(i => resolveInvoiceStatus(i, nowSec).status === 'funded').reduce((acc, i) => acc + i.fullAmount, 0n);
   const totalInProgress = invoices.filter(i => resolveInvoiceStatus(i, nowSec).status === 'in_progress').reduce((acc, i) => acc + i.fullAmount, 0n);
@@ -115,9 +110,9 @@ export default function DashboardPage() {
     const s = resolveInvoiceStatus(invoice, nowSec).status;
     
     if (role === 'buyer') {
-      return s === 'draft' || s === 'accepted' || s === 'overdue';
+      return s === 'sent' || s === 'overdue';
     } else {
-      return s === 'sent' || s === 'funded';
+      return s === 'funded';
     }
   });
 
@@ -134,11 +129,9 @@ export default function DashboardPage() {
     const s = resolveInvoiceStatus(invoice, nowSec).status;
     
     if (role === 'Sent') {
-      if (s === 'draft') return { label: 'Send to supplier', icon: <ArrowRight size={16} /> };
-      if (s === 'accepted') return { label: 'Secure payment', icon: <Wallet size={16} /> };
+      if (s === 'sent') return { label: 'Secure payment', icon: <Wallet size={16} /> };
       if (s === 'overdue') return { label: 'Settlement ready', icon: <AlertCircle size={16} /> };
     } else {
-      if (s === 'sent') return { label: 'Review & Accept', icon: <CheckCircle2 size={16} /> };
       if (s === 'funded') return { label: 'Receive early payment', icon: <Clock size={16} /> };
     }
     return { label: 'View details', icon: <ArrowRight size={16} /> };
@@ -306,6 +299,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-// Ensure icon is available for empty state
-import { FileText } from 'lucide-react';

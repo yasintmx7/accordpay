@@ -24,7 +24,6 @@ import InvoiceUtilities from '@/components/InvoiceUtilities';
 import NetworkFeeSelector from '@/components/NetworkFeeSelector';
 import PaymentLinkButton from '@/components/PaymentLinkButton';
 import InvoiceTimeline from '@/components/InvoiceTimeline';
-import DocumentUpload from '@/components/DocumentUpload';
 import { resolveInvoiceStatus } from '@/lib/invoice-status';
 import InvoiceStatusBadge from '@/components/InvoiceStatusBadge';
 import { InlineCompanyName } from '@/components/CompanyName';
@@ -86,79 +85,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     return () => window.clearTimeout(timer);
   }, [loadInvoice]);
 
-  // Handle off-chain Accept / Reject logic
-  async function handleOffchainAccept() {
-    if (!walletClient || !address || !invoice) return;
-    setTxStatus('submitting');
-    try {
-      // Create acceptance signature message
-      const message = `Accept AccordPay Invoice #${invoice.id.toString()}\nAmount: ${formatUsdc(invoice.fullAmount)} USDC\nDue: ${new Date(Number(invoice.dueDate) * 1000).toLocaleString()}`;
-      let signature: `0x${string}` = '0x' as `0x${string}`;
-      try {
-        signature = await walletClient.signMessage({
-          message,
-          account: walletClient.account!,
-        });
-      } catch (err) {
-        // Fallback for testing: bypass strict signature requirement if wallet fails.
-        console.warn('Sign message failed or was bypassed:', err);
-      }
-      
-      updateInvoiceMeta(invoice.id.toString(), {
-        businessStatus: 'accepted',
-        acceptance: {
-          status: 'accepted',
-          supplierWallet: address.toLowerCase(),
-          signature,
-          message,
-          timestamp: Date.now(),
-          rejectionReason: '',
-        }
-      });
-      
-      notifyInvoiceEvent(
-        invoice.buyer,
-        invoice.id.toString(),
-        'invoice_accepted',
-        'Invoice Accepted',
-        `Supplier accepted invoice #${invoice.id.toString()}`
-      );
-      
-      setTxStatus('confirmed');
-      await loadInvoice();
-    } catch (err) {
-      setError(formatTransactionError(err));
-      setTxStatus('failed');
-    }
-  }
-
-  async function handleOffchainReject() {
-    if (!invoice || !address) return;
-    const reason = window.prompt("Reason for rejection (optional):");
-    if (reason === null) return; // cancelled
-    
-    updateInvoiceMeta(invoice.id.toString(), {
-      businessStatus: 'rejected',
-      acceptance: {
-        status: 'rejected',
-        supplierWallet: address.toLowerCase(),
-        signature: '',
-        message: '',
-        timestamp: Date.now(),
-        rejectionReason: reason,
-      }
-    });
-    
-    notifyInvoiceEvent(
-      invoice.buyer,
-      invoice.id.toString(),
-      'invoice_rejected',
-      'Invoice Rejected',
-      `Supplier rejected invoice #${invoice.id.toString()}${reason ? `: ${reason}` : ''}`
-    );
-    
-    await loadInvoice();
-  }
+  // Off-chain Accept/Reject logic has been completely removed to simplify the B2B workflow.
 
   const performAction = useCallback(async (action: InvoiceAction) => {
     if (!walletClient || !publicClient || !address || !invoice || !ACCORDPAY_ADDRESS) return;
@@ -252,16 +179,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   
   // Action state logic based on unified status
   const s = resolvedStatus.status;
-  const canOffchainAccept = isSupplier && s === 'sent';
-  const canOffchainReject = isSupplier && s === 'sent';
-  const canFund = isBuyer && s === 'accepted';
-  const canCancel = isBuyer && (s === 'draft' || s === 'sent' || s === 'accepted');
+  const canFund = isBuyer && s === 'sent';
+  const canCancel = isBuyer && s === 'sent';
   const canSettleEarly = isSupplier && (s === 'funded' || s === 'in_progress') && !isPastDue;
   const canSettleAtMaturity = (isBuyer || isSupplier) && s === 'overdue' && isPastDue;
   const canOnchainReject = isSupplier && (s === 'funded' || s === 'in_progress' || s === 'overdue');
-  const canUpdatePayout = isSupplier && (s === 'sent' || s === 'accepted' || s === 'funded' || s === 'in_progress' || s === 'overdue');
+  const canUpdatePayout = isSupplier && (s === 'sent' || s === 'funded' || s === 'in_progress' || s === 'overdue');
   
-  const hasAvailableAction = canOffchainAccept || canOffchainReject || canFund || canCancel || canOnchainReject || canSettleEarly || canSettleAtMaturity;
+  const hasAvailableAction = canFund || canCancel || canOnchainReject || canSettleEarly || canSettleAtMaturity;
 
   return (
     <div className="page-shell max-w-6xl space-y-6 py-8 sm:py-10">
@@ -275,15 +200,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         <div className="space-y-6">
           <section className="card p-5 sm:p-7">
             <h2 className="section-title">Commercial Details</h2>
-            <dl className="detail-grid mb-6">
+            <dl className="detail-grid">
               <dt>Buyer</dt><dd><InlineCompanyName wallet={invoice.buyer} /></dd>
               <dt>Supplier</dt><dd><InlineCompanyName wallet={invoice.supplier} /></dd>
               <dt>Invoice Reference</dt><dd>{meta?.invoiceNumber || 'No name added'}</dd>
               <dt>Description</dt><dd>{meta?.description || 'No description added'}</dd>
             </dl>
-            
-            <h3 className="text-sm font-semibold text-slate-900 mb-3 dark:text-zinc-100">Document Verification</h3>
-            <DocumentUpload document={meta?.document || null} onUpload={()=>{}} onRemove={()=>{}} readOnly />
           </section>
           
           <section className="card p-5 sm:p-7">
@@ -315,19 +237,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 <AlertCircle size={20} className="text-indigo-600 dark:text-indigo-400"/> Action Required
               </h2>
               
-              {canOffchainAccept && (
-                <div>
-                  <p className="mb-4 text-sm text-slate-600 dark:text-zinc-400">Review the commercial terms and document. Accept the invoice to proceed to funding.</p>
-                  <div className="flex gap-3">
-                    <button disabled={isBusy} onClick={handleOffchainAccept} className="button-success w-full"><ShieldCheck size={16}/> Accept Terms</button>
-                    <button disabled={isBusy} onClick={handleOffchainReject} className="button-danger w-full"><XCircle size={16}/> Reject</button>
-                  </div>
-                </div>
-              )}
-
               {canFund && (
                 <div>
-                  <p className="mb-4 text-sm text-slate-600 dark:text-zinc-400">The supplier has accepted the terms. Secure the payment in the escrow contract.</p>
+                  <p className="mb-4 text-sm text-slate-600 dark:text-zinc-400">Secure the payment in the escrow contract to fund this invoice.</p>
                   <NetworkFeeSelector compact />
                   <button disabled={isBusy} onClick={() => void performAction('fund')} className="button-primary mt-4 w-full disabled:opacity-50">
                     <Wallet size={16}/> {txStatus === 'approving' ? 'Approving USDC...' : txStatus === 'submitting' ? 'Securing payment...' : 'Secure payment'}
@@ -367,7 +279,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             <h2 className="text-base font-bold mb-4 border-b border-slate-100 pb-2 dark:border-zinc-700">Blockchain Proofs</h2>
             <dl className="space-y-3 text-sm">
               <div><dt className="text-xs text-slate-500">Invoice Hash</dt><dd><CopyableValue value={invoice.invoiceReferenceHash} label="hash" /></dd></div>
-              <div><dt className="text-xs text-slate-500">Doc/Desc Hash</dt><dd><CopyableValue value={invoice.descriptionHash} label="hash" /></dd></div>
             </dl>
           </section>
 

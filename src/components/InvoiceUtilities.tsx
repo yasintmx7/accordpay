@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Download, Printer, ExternalLink, Terminal, FileText } from 'lucide-react';
 import { InvoiceStatus, statusLabel, type OnChainInvoice } from '@/lib/accordpay';
 import { formatUsdc } from '@/lib/usdc';
 import { ARC_TESTNET_EXPLORER_URL } from '@/lib/config';
@@ -41,28 +42,28 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       try {
         const { pad, toHex, decodeEventLog } = await import('viem');
         const { accordPayAbi } = await import('@/lib/contracts/accordpay-abi');
-        
+
         const latest = await publicClient.getBlockNumber();
         const hashes: Record<string, string> = {};
-        
+
         let foundCreated = false;
         // Search backwards in 10,000-block chunks to respect Arc RPC limits
         for (let i = 0n; i < 200n; i++) {
           const to = latest - (i * 10000n);
           const from = to - 9999n > 0n ? to - 9999n : 0n;
-          
+
           try {
             const logs = await publicClient.getLogs({
               address: process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS as `0x${string}`,
               // @ts-expect-error viem getLogs topics typing requires strict ABI matching
               topics: [
-                null, 
+                null,
                 pad(toHex(invoice.id), { size: 32 })
               ] as [null, `0x${string}`],
               fromBlock: from,
               toBlock: to,
             });
-            
+
             for (const log of logs) {
               try {
                 const decoded = decodeEventLog({ abi: accordPayAbi, data: log.data, topics: log.topics });
@@ -73,10 +74,10 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
           } catch {
              // If a chunk fails, ignore and continue
           }
-          
+
           if (foundCreated || from === 0n) break;
         }
-        
+
         setTxHashes({ ...hashes });
       } catch (e) {
         console.error('Failed to fetch tx hashes:', e);
@@ -136,14 +137,14 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.line(20, 38, 190, 38);
       return 46;
     };
-    
+
     const isSettledEarly = invoice.status === InvoiceStatus.SettledEarly;
     const isSettledAtMaturity = invoice.status === InvoiceStatus.SettledAtMaturity;
     const isSettled = isSettledEarly || isSettledAtMaturity;
 
     const createdDate = new Date(Number(invoice.createdAt) * 1_000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     const dueDate = new Date(Number(invoice.dueDate) * 1_000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-    
+
     // Buyer / Supplier names
     const buyerName = getDisplayName(invoice.buyer);
     const supplierName = getDisplayName(invoice.supplier);
@@ -151,16 +152,15 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
     const supplierProfile = getCompanyProfile(invoice.supplier);
 
     const meta = getInvoiceMeta(invoice.id.toString());
-    const docHashStr = invoice.descriptionHash;
     const invoiceNum = meta?.invoiceNumber || invoice.id.toString();
 
     let y = 46;
 
     if (!isSettled) {
       // --- B2B INVOICE ---
-      
+
       y = drawPdfHeader('Invoice', `Invoice #${invoiceNum}`);
-      
+
       // Status Badge
       const statusInfo = resolveInvoiceStatus(invoice, BigInt(Math.floor(Date.now() / 1000)));
       doc.setFontSize(9);
@@ -193,14 +193,14 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMain);
       doc.text(buyerName, 20, y);
       doc.text(supplierName, 110, y);
-      
+
       y += 6;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(...textMuted);
       if (buyerProfile?.email) { doc.text(buyerProfile.email, 20, y); }
       if (supplierProfile?.email) { doc.text(supplierProfile.email, 110, y); }
-      
+
       y += 6;
       doc.setFont('courier', 'normal');
       doc.setFontSize(9);
@@ -218,7 +218,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMuted);
       doc.text('Description', 20, y);
       doc.text('Amount', 190, y, { align: 'right' });
-      
+
       y += 10;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
@@ -250,7 +250,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.text('Payment Terms', 20, y);
-      
+
       y += 8;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -259,7 +259,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMuted); doc.text('Payment terms: ', 20, y); doc.setTextColor(...textMain); doc.text(`Due ${dueDate}`, 60, y); y += 6;
       doc.setTextColor(...textMuted); doc.text('Early settlement: ', 20, y); doc.setTextColor(...textMain); doc.text('Available', 60, y); y += 6;
       doc.setTextColor(...textMuted); doc.text('Early amount: ', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(invoice.earlySettlementAmount)} USDC`, 60, y);
-      
+
       y += 20;
       // BLOCKCHAIN VERIFICATION
       doc.setFont('helvetica', 'bold');
@@ -271,12 +271,11 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMuted);
       doc.text(`Network: Arc Testnet`, 20, y); y += 6;
       doc.text(`Contract: ${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS || ''}`, 20, y); y += 6;
-      doc.text(`Reference hash: ${invoice.invoiceReferenceHash.slice(0, 20)}...`, 20, y); y += 6;
-      doc.text(`Document hash: ${docHashStr.slice(0, 20)}...`, 20, y);
+      doc.text(`Reference hash: ${invoice.invoiceReferenceHash.slice(0, 20)}...`, 20, y);
 
     } else {
       // --- SETTLEMENT RECEIPT ---
-      
+
       y = drawPdfHeader(
         'Settlement Receipt',
         `Invoice #${invoiceNum}`,
@@ -287,7 +286,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMuted);
       doc.text('STATUS', 20, y);
       doc.text('SETTLEMENT DATE', 80, y);
-      
+
       y += 6;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
@@ -305,12 +304,12 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       // PAYMENT RESULT
       const amountPaid = isSettledEarly ? invoice.earlySettlementAmount : invoice.fullAmount;
       const discount = invoice.fullAmount - invoice.earlySettlementAmount;
-      
+
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...textMuted);
       doc.text('AMOUNT PAID TO SUPPLIER', 20, y);
-      
+
       y += 14;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(32);
@@ -325,7 +324,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMuted); doc.text('Early settlement discount', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(discount)} USDC`, 90, y, { align: 'right' }); y += 7;
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...textMuted); doc.text('Supplier received', 20, y); doc.setTextColor(...textMain); doc.text(`${formatUsdc(amountPaid)} USDC`, 90, y, { align: 'right' });
-      
+
       y += 15;
       doc.setDrawColor(...line);
       doc.line(20, y, 190, y);
@@ -344,7 +343,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setTextColor(...textMain);
       doc.text(buyerName, 20, y);
       doc.text(supplierName, 110, y);
-      
+
       y += 6;
       doc.setFont('courier', 'normal');
       doc.setFontSize(9);
@@ -362,12 +361,12 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setFontSize(12);
       doc.setTextColor(...textMain);
       doc.text('Invoice Information', 20, y);
-      
+
       y += 8;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(...textMuted);
-      doc.text('Issue date: ', 20, y); doc.setTextColor(...textMain); doc.text(createdDate, 60, y); 
+      doc.text('Issue date: ', 20, y); doc.setTextColor(...textMain); doc.text(createdDate, 60, y);
       doc.setTextColor(...textMuted); doc.text('Due date: ', 110, y); doc.setTextColor(...textMain); doc.text(dueDate, 140, y); y += 7;
       doc.setTextColor(...textMuted); doc.text('Payment method: ', 20, y); doc.setTextColor(...textMain); doc.text('USDC on Arc', 60, y);
 
@@ -381,7 +380,7 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
       doc.setFontSize(11);
       doc.setTextColor(...textMain);
       doc.text('Blockchain Verification', 20, y);
-      
+
       y += 8;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
@@ -417,62 +416,100 @@ export default function InvoiceUtilities({ invoice }: { invoice: OnChainInvoice 
   const isSettled = invoice.status === InvoiceStatus.SettledEarly || invoice.status === InvoiceStatus.SettledAtMaturity;
   const isFunded = invoice.status === InvoiceStatus.Funded;
 
-  return <div className="grid gap-6">
-    <section className="card p-5 sm:p-6">
-      <h2 className="section-title">{isSettled ? 'Settlement Documents' : 'Invoice Documents'}</h2>
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-        <p className="font-semibold text-emerald-800 dark:text-emerald-400">On-chain verification complete</p>
-        <p className="mt-1 text-sm leading-5 text-emerald-700 dark:text-emerald-500">
-          The document details match the permanent contract record on Arc Testnet.
-        </p>
-      </div>
-      
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <button type="button" onClick={() => downloadReceipt('download')} className="button-secondary w-full">
-          Download PDF
-        </button>
-        <button type="button" onClick={() => downloadReceipt('print')} className="button-secondary w-full">
-          Print Document
-        </button>
-      </div>
-      
-      <div className="mt-3">
-        {(() => {
-          const latestTx = txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity'] || txHashes['InvoiceFunded'] || txHashes['InvoiceCreated'];
-          const explorerLink = latestTx 
-            ? `${ARC_TESTNET_EXPLORER_URL}/tx/${latestTx}`
-            : `${ARC_TESTNET_EXPLORER_URL}/address/${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS ?? ''}`;
-            
-          return (
-            <a 
-              href={explorerLink}
-              target="_blank" 
-              rel="noreferrer" 
-              className="button-secondary w-full flex items-center justify-center gap-2"
-            >
-              View on ArcScan ↗
-            </a>
-          );
-        })()}
-      </div>
+  return (
+    <div className="grid gap-6">
+      <section className="card overflow-hidden">
+        <div className="border-b border-slate-100 bg-slate-50/50 px-5 py-4 dark:border-zinc-800/80 dark:bg-zinc-900/20">
+          <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-zinc-100">
+            <FileText size={18} className="text-slate-400 dark:text-zinc-500" />
+            {isSettled ? 'Settlement Receipt' : 'Invoice Record'}
+          </h2>
+        </div>
 
-      <div className="mt-5">
-        <details className="rounded-xl border border-slate-200 dark:border-zinc-700">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50">
-            View technical details
-          </summary>
-          <div className="border-t border-slate-200 p-4 text-xs leading-5 text-slate-500 dark:border-zinc-700 font-mono">
-            <p className="mb-2 text-slate-700 font-bold dark:text-zinc-300 font-sans">Raw Blockchain Identifiers</p>
-            <p><strong>Contract:</strong> <br/> {process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS}</p>
-            <p className="mt-2"><strong>Reference Hash:</strong> <br/> {invoice.invoiceReferenceHash}</p>
-            <p className="mt-2"><strong>Document Hash:</strong> <br/> {invoice.descriptionHash}</p>
+        <div className="p-5 sm:p-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-200">Off-chain PDF Receipt</h3>
+              <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-zinc-400">
+                Generate a professional PDF summary of the commercial terms permanently recorded on the Arc Testnet.
+              </p>
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => downloadReceipt('print')}
+                className="button-secondary flex items-center justify-center gap-2"
+              >
+                <Printer size={16} />
+                <span>Print</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadReceipt('download')}
+                className="button-primary flex items-center justify-center gap-2"
+              >
+                <Download size={16} />
+                <span>Download PDF</span>
+              </button>
+            </div>
           </div>
-        </details>
-      </div>
-      
-      <p className="mt-5 text-xs leading-5 text-slate-500">
-        Documents are securely generated in your browser from current on-chain data.
-      </p>
-    </section>
-  </div>;
+
+          <div className="mt-8 border-t border-slate-100 pt-6 dark:border-zinc-800/80">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-200">Blockchain Explorer</h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">View the raw smart contract transactions.</p>
+              </div>
+
+              {(() => {
+                const latestTx = txHashes['InvoiceSettledEarly'] || txHashes['InvoiceSettledAtMaturity'] || txHashes['InvoiceFunded'] || txHashes['InvoiceCreated'];
+                const explorerLink = latestTx
+                  ? `${ARC_TESTNET_EXPLORER_URL}/tx/${latestTx}`
+                  : `${ARC_TESTNET_EXPLORER_URL}/address/${process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS ?? ''}`;
+
+                return (
+                  <a
+                    href={explorerLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="button-secondary flex w-full items-center justify-center gap-2 sm:w-auto"
+                  >
+                    <span>View on ArcScan</span>
+                    <ExternalLink size={14} />
+                  </a>
+                );
+              })()}
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <details className="group overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-700">
+              <summary className="flex cursor-pointer items-center gap-2 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 dark:bg-zinc-800/50 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <Terminal size={16} className="text-slate-400 dark:text-zinc-500" />
+                View technical details
+              </summary>
+              <div className="border-t border-slate-200 bg-white p-4 text-xs leading-6 text-slate-500 dark:border-zinc-700 dark:bg-zinc-900 font-mono">
+                <p className="mb-3 font-sans font-bold text-slate-700 dark:text-zinc-300">Raw Blockchain Identifiers</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <span className="block text-slate-400 dark:text-zinc-500">Contract</span>
+                    <span className="break-all text-slate-800 dark:text-zinc-200">{process.env.NEXT_PUBLIC_ACCORDPAY_ADDRESS}</span>
+                  </div>
+                  <div>
+                    <span className="block text-slate-400 dark:text-zinc-500">Invoice Reference Hash</span>
+                    <span className="break-all text-slate-800 dark:text-zinc-200">{invoice.invoiceReferenceHash}</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <p className="mt-5 text-center text-xs text-slate-400 dark:text-zinc-600">
+            Documents are securely generated locally in your browser from current on-chain data.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
 }

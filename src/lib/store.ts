@@ -68,23 +68,6 @@ export type BusinessStatus =
   | 'rejected'
   | 'cancelled';
 
-export interface AcceptanceRecord {
-  supplierWallet: string;
-  status: 'accepted' | 'rejected';
-  signature: string;       // hex signature or empty
-  message: string;         // the message that was signed
-  timestamp: number;       // ms
-  rejectionReason: string; // only if rejected
-}
-
-export interface DocumentRecord {
-  fileName: string;
-  fileSize: number;
-  fileType: string;
-  hash: string;           // SHA-256 hex
-  uploadedAt: number;     // ms
-  dataUri: string;        // base64 data URI of the file
-}
 
 export interface InvoiceMeta {
   /** On-chain invoice ID as string */
@@ -99,10 +82,6 @@ export interface InvoiceMeta {
   buyerWallet: string;
   /** Supplier wallet */
   supplierWallet: string;
-  /** Attached document */
-  document: DocumentRecord | null;
-  /** Acceptance/rejection records */
-  acceptance: AcceptanceRecord | null;
   /** When the invoice was created in the app (not on-chain) */
   createdAt: number;
   /** When the invoice was "sent" to the supplier */
@@ -161,8 +140,6 @@ export function updateInvoiceMeta(invoiceId: string, partial: Partial<InvoiceMet
       description: '',
       buyerWallet: '',
       supplierWallet: '',
-      document: null,
-      acceptance: null,
       createdAt: Date.now(),
       sentAt: Date.now(),
       updatedAt: Date.now(),

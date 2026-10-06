@@ -48,9 +48,7 @@ export function StatusBadgeByType({ status, label, size = 'sm' }: { status: Unif
 
 function resolveStatusInfo(status: UnifiedStatus) {
   const map: Record<UnifiedStatus, { variant: string; label: string }> = {
-    draft:       { variant: 'neutral', label: 'Draft' },
     sent:        { variant: 'pending', label: 'Sent' },
-    accepted:    { variant: 'info',    label: 'Accepted' },
     rejected:    { variant: 'danger',  label: 'Rejected' },
     cancelled:   { variant: 'danger',  label: 'Cancelled' },
     funded:      { variant: 'info',    label: 'Funded' },

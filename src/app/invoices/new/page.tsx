@@ -9,8 +9,7 @@ import { tryParseUsdc, formatUsdc } from '@/lib/usdc';
 import { getExplorerUrl } from '@/lib/arc';
 import NetworkFeeSelector from '@/components/NetworkFeeSelector';
 import { ACCORDPAY_ADDRESS, IS_ACCORDPAY_CONFIGURED } from '@/lib/config';
-import DocumentUpload from '@/components/DocumentUpload';
-import { setInvoiceMeta, notifyInvoiceEvent, type DocumentRecord, getDisplayName } from '@/lib/store';
+import { setInvoiceMeta, notifyInvoiceEvent, getDisplayName } from '@/lib/store';
 import { ShieldCheck, Send, Info } from 'lucide-react';
 
 type TxStatus = 'idle' | 'submitting' | 'confirmed' | 'failed';
@@ -37,7 +36,6 @@ export default function CreateInvoicePage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [dynamicEarlySettlement, setDynamicEarlySettlement] = useState(false);
   const [minimumDueDate, setMinimumDueDate] = useState('');
-  const [document, setDocument] = useState<DocumentRecord | null>(null);
 
   useEffect(() => {
     const refreshMinimum = () => setMinimumDueDate(toLocalDateTimeInput(new Date(Date.now() + MINIMUM_DUE_LEAD_MS)));
@@ -59,8 +57,8 @@ export default function CreateInvoicePage() {
 
     setTxStatus('submitting');
     try {
-      const docHash = (document ? `0x${document.hash}` : `0x${'00'.repeat(32)}`) as `0x${string}`;
-      
+      const emptyHash = `0x${'00'.repeat(32)}` as `0x${string}`;
+
       // Step 1: Create on-chain invoice
       const result = await createInvoice(
         walletClient,
@@ -72,11 +70,11 @@ export default function CreateInvoicePage() {
           earlySettlementAmount: earlyAmount!,
           dueDate: BigInt(Math.floor(dueDateMilliseconds / 1_000)),
           invoiceReferenceHash: hashString(reference.trim() || `AccordPay:${address}:${supplierAddress}:${dueDateMilliseconds}:${fullAmount!.toString()}`),
-          descriptionHash: docHash, // We store the document SHA-256 hash in the descriptionHash field for on-chain verification
+          descriptionHash: emptyHash,
           dynamicEarlySettlement,
         },
       );
-      
+
       const invoiceIdStr = result.invoiceId.toString();
 
       // Step 2: Save business metadata & document off-chain
@@ -87,8 +85,6 @@ export default function CreateInvoicePage() {
         description: description.trim(),
         buyerWallet: address.toLowerCase(),
         supplierWallet: supplierAddress.toLowerCase(),
-        document,
-        acceptance: null,
         createdAt: Date.now(),
         sentAt: Date.now(),
         updatedAt: Date.now(),
@@ -145,7 +141,7 @@ export default function CreateInvoicePage() {
           <div className="px-5 py-6 text-left sm:px-10">
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-zinc-900/50 mb-6">
               <h3 className="font-semibold text-slate-900 dark:text-zinc-100">Next Steps</h3>
-              <p className="mt-1 text-sm text-slate-500">The supplier will review the invoice and payment terms. Once they accept, you can secure the payment with USDC.</p>
+              <p className="mt-1 text-sm text-slate-500">The invoice is now recorded on-chain. You can fund the invoice with USDC to secure the payment.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2"><button onClick={() => router.push(`/invoices/${createdId.toString()}`)} className="button-primary">View invoice</button><button onClick={() => router.push('/dashboard')} className="button-secondary">Return to dashboard</button></div>
           </div>
@@ -160,12 +156,12 @@ export default function CreateInvoicePage() {
     <div className="page-shell max-w-3xl py-10">
       <div className="mb-7">
         <p className="eyebrow">B2B Workflow</p>
-        <h1 className="text-3xl font-bold dark:text-zinc-100">Draft an invoice</h1>
-        <p className="mt-2 text-slate-600 dark:text-zinc-400">Add details, attach a document, and send to the supplier for approval.</p>
+        <h1 className="text-3xl font-bold dark:text-zinc-100">Create Invoice</h1>
+        <p className="mt-2 text-slate-600 dark:text-zinc-400">Enter recipient details, set payment terms, and create the invoice.</p>
       </div>
 
       <ol className="mb-6 grid grid-cols-3 gap-2">
-        {(['Details & Docs', 'Terms', 'Send'] as const).map((label, index) => {
+        {(['Details', 'Terms', 'Confirm'] as const).map((label, index) => {
           const number = (index + 1) as 1 | 2 | 3;
           const active = step === number;
           const complete = step > number;
@@ -180,13 +176,8 @@ export default function CreateInvoicePage() {
           <div><h2 className="text-xl font-bold">Commercial Details</h2></div>
           <label className="field-label">Supplier wallet<input required value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="0x…" className="field-input font-mono" /></label>
           <div className="grid gap-6 md:grid-cols-2">
-            <label className="field-label">Invoice Reference<input maxLength={120} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="INV-2026-001" className="field-input" /></label>
-            <label className="field-label">Description<input maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Design services" className="field-input" /></label>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2 dark:text-zinc-300">Attach Document (Optional)</h3>
-            <DocumentUpload document={document} onUpload={setDocument} onRemove={() => setDocument(null)} />
-            <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><Info size={14}/> The document hash will be securely anchored on-chain.</p>
+            <label className="field-label">Invoice Reference (Optional)<input maxLength={120} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="INV-2026-001" className="field-input" /></label>
+            <label className="field-label">Description (Optional)<input maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Design services" className="field-input" /></label>
           </div>
           <div className="flex justify-end"><button type="button" onClick={validateStep1} className="button-primary w-full sm:w-auto">Continue</button></div>
         </div>}
@@ -203,20 +194,19 @@ export default function CreateInvoicePage() {
         </div>}
 
         {step === 3 && <div className="space-y-6">
-          <div><h2 className="text-xl font-bold">Send to Supplier</h2></div>
+          <div><h2 className="text-xl font-bold">Confirm & Create</h2></div>
           <dl className="detail-grid rounded-xl bg-slate-50 p-4 dark:bg-zinc-900/50">
             <dt>Supplier</dt><dd className="font-mono text-xs">{supplier}</dd>
             <dt>Full payment</dt><dd className="font-bold">{fullAmount !== null ? formatUsdc(fullAmount) : '0'} USDC</dd>
             <dt>Early payment</dt><dd>{earlyAmount !== null ? formatUsdc(earlyAmount) : '0'} USDC</dd>
             <dt>Due</dt><dd>{dueDateInput ? new Date(dueDateInput).toLocaleString() : 'Not set'}</dd>
-            <dt>Document</dt><dd>{document ? document.fileName : 'None attached'}</dd>
           </dl>
           <NetworkFeeSelector />
           <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-800 dark:bg-blue-900/20 dark:border-blue-900/50 dark:text-blue-300 flex gap-3">
             <Info className="shrink-0 mt-0.5" size={18} />
-            <p>Creating this invoice commits the terms to the blockchain, but <strong>no USDC is required yet</strong>. You will fund the invoice after the supplier accepts.</p>
+            <p>Creating this invoice securely commits the terms to the blockchain. <strong>No USDC is required yet</strong>. You will fund the invoice in the next step.</p>
           </div>
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><button type="button" disabled={isSubmitting} onClick={() => setStep(2)} className="button-secondary disabled:opacity-50">Back</button><button type="submit" disabled={isSubmitting} className="button-primary disabled:opacity-50"><Send size={16} className="mr-1" /> {isSubmitting ? 'Sending…' : 'Send Invoice'}</button></div>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><button type="button" disabled={isSubmitting} onClick={() => setStep(2)} className="button-secondary disabled:opacity-50">Back</button><button type="submit" disabled={isSubmitting} className="button-primary disabled:opacity-50"><Send size={16} className="mr-1" /> {isSubmitting ? 'Creating…' : 'Create Invoice'}</button></div>
         </div>}
       </form>
     </div>
