@@ -256,8 +256,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const canOffchainReject = isSupplier && s === 'sent';
   const canFund = isBuyer && s === 'accepted';
   const canCancel = isBuyer && (s === 'draft' || s === 'sent' || s === 'accepted');
-  const canSettleEarly = isSupplier && s === 'funded';
-  const canSettleAtMaturity = (isBuyer || isSupplier) && (s === 'in_progress' || s === 'overdue');
+  const canSettleEarly = isSupplier && (s === 'funded' || s === 'in_progress') && !isPastDue;
+  const canSettleAtMaturity = (isBuyer || isSupplier) && s === 'overdue' && isPastDue;
   const canOnchainReject = isSupplier && (s === 'funded' || s === 'in_progress' || s === 'overdue');
   const canUpdatePayout = isSupplier && (s === 'sent' || s === 'accepted' || s === 'funded' || s === 'in_progress' || s === 'overdue');
   

@@ -301,11 +301,23 @@ export function settleEarly(
   return writeInvoiceAction('settleEarly', walletClient, publicClient, contractAddress, invoiceId);
 }
 
-export function settleAtMaturity(
+export async function settleAtMaturity(
   walletClient: WalletClient,
   publicClient: PublicClient,
   contractAddress: Address,
   invoiceId: bigint,
 ) {
+  const [invoice, block] = await Promise.all([
+    getInvoice(publicClient, contractAddress, invoiceId),
+    publicClient.getBlock(),
+  ]);
+  if (invoice.status !== InvoiceStatus.Funded) {
+    throw new Error('This invoice is no longer available for settlement. Refresh to see its latest status.');
+  }
+  if (block.timestamp < invoice.dueDate) {
+    throw new Error(
+      `Payment can be finalized after ${new Date(Number(invoice.dueDate) * 1_000).toLocaleString()}.`,
+    );
+  }
   return writeInvoiceAction('settleAtMaturity', walletClient, publicClient, contractAddress, invoiceId);
 }
