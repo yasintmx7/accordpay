@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -20,7 +21,14 @@ import {
   type WalletClient,
 } from 'viem';
 import { arcTestnet, supportedChains } from './arc';
-import { getNetworkFeeMode, setNetworkFeeMode as persistNetworkFeeMode, type NetworkFeeMode } from './circle-modular-wallet';
+import {
+  clearCirclePasskeyRuntime,
+  getNetworkFeeMode,
+  PASSKEY_WALLET_RDNS,
+  restoreCirclePasskeyProvider,
+  setNetworkFeeMode as persistNetworkFeeMode,
+  type NetworkFeeMode,
+} from './circle-modular-wallet';
 
 interface EIP6963ProviderInfo {
   rdns: string;
@@ -71,6 +79,13 @@ export interface WalletState {
 
 const WalletContext = createContext<WalletState | null>(null);
 
+const passkeyWalletInfo: EIP6963ProviderInfo = {
+  uuid: 'accordpay-circle-passkey',
+  name: 'AccordPay Passkey',
+  icon: '',
+  rdns: PASSKEY_WALLET_RDNS,
+};
+
 export function useWallet(): WalletState {
   const context = useContext(WalletContext);
   if (!context) throw new Error('useWallet must be used inside <WalletProvider>.');
@@ -92,6 +107,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feeMode, setFeeModeState] = useState<NetworkFeeMode>(() => typeof window === 'undefined' ? 'sponsored' : getNetworkFeeMode());
+  const passkeyRestoreAttempted = useRef(false);
 
   useEffect(() => {
     const update = (event: Event) => setFeeModeState((event as CustomEvent<NetworkFeeMode>).detail);
@@ -148,6 +164,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (wallets.length > 0 || activeWallet) return;
+    if (
+      localStorage.getItem('accordpay_wallet_rdns') === PASSKEY_WALLET_RDNS &&
+      localStorage.getItem('accordpay_passkey_session') === '1'
+    ) return;
     const timer = window.setTimeout(() => setStatus('no_wallet'), 900);
     return () => window.clearTimeout(timer);
   }, [wallets.length, activeWallet]);
@@ -200,8 +220,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined') {
         localStorage.setItem('accordpay_wallet_rdns', wallet.info.rdns);
         // Persist a passkey session flag so the reconnect banner shows after a refresh.
-        if (wallet.info.rdns === 'app.accordpay.passkey') {
+        if (wallet.info.rdns === PASSKEY_WALLET_RDNS) {
           localStorage.setItem('accordpay_passkey_session', '1');
+        } else {
+          localStorage.removeItem('accordpay_passkey_session');
         }
       }
     } catch (connectError) {
@@ -215,7 +237,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [synchronize]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || activeWallet || passkeyRestoreAttempted.current) return;
+    const savedRdns = localStorage.getItem('accordpay_wallet_rdns');
+    const hasPasskeySession = localStorage.getItem('accordpay_passkey_session') === '1';
+    if (savedRdns !== PASSKEY_WALLET_RDNS || !hasPasskeySession) return;
+
+    passkeyRestoreAttempted.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStatus('connecting');
+    setError(null);
+
+    void restoreCirclePasskeyProvider(feeMode)
+      .then((restored) => {
+        if (!restored) {
+          setStatus('disconnected');
+          return;
+        }
+        void connect({ info: passkeyWalletInfo, provider: restored.provider as EIP1193Provider }, true);
+      })
+      .catch(() => {
+        setStatus('disconnected');
+      });
+  }, [activeWallet, connect, feeMode]);
+
   const disconnect = useCallback(async () => {
+    const disconnectingPasskey = activeWallet?.info.rdns === PASSKEY_WALLET_RDNS || (
+      typeof window !== 'undefined' &&
+      localStorage.getItem('accordpay_wallet_rdns') === PASSKEY_WALLET_RDNS
+    );
     if (activeWallet) {
       try {
         await activeWallet.provider.request({
@@ -232,6 +282,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Clear the passkey session flag so the reconnect banner does not re-appear.
       localStorage.removeItem('accordpay_passkey_session');
     }
+    if (disconnectingPasskey) clearCirclePasskeyRuntime();
     setStatus(wallets.length === 0 ? 'no_wallet' : 'disconnected');
     setAddress(null);
     setChainId(null);
@@ -314,7 +365,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (activeWallet) return;
     
     const savedRdns = localStorage.getItem('accordpay_wallet_rdns');
-    if (!savedRdns) return;
+    if (!savedRdns || savedRdns === PASSKEY_WALLET_RDNS) return;
 
     const previouslyConnected = wallets.find(w => w.info.rdns === savedRdns);
     if (previouslyConnected && status === 'disconnected') {
@@ -326,7 +377,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const chain = chainId ? resolveChain(chainId) : null;
   const isOnSupportedChain = chain !== null;
   const isOnTestnet = chainId === arcTestnet.id;
-  const isPasskeyWallet = activeWallet?.info.rdns === 'app.accordpay.passkey';
+  const isPasskeyWallet = activeWallet?.info.rdns === PASSKEY_WALLET_RDNS;
   // isPasskeySession is true from the moment of connect until explicit disconnect,
   // even across page refreshes (read from localStorage).
   const isPasskeySession = isPasskeyWallet || (

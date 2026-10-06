@@ -23,6 +23,9 @@ const CLIENT_KEY = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_KEY || '';
 const RPC_URL = process.env.NEXT_PUBLIC_ARC_RPC_URL || 'https://rpc.testnet.arc.io';
 const FEE_KEY = 'accordpay_fee_mode';
 const RECOVERY_KEY_PREFIX = 'accordpay_recovery_enabled_';
+const PASSKEY_CREDENTIAL_KEY = 'accordpay_passkey_credential_v1';
+
+export const PASSKEY_WALLET_RDNS = 'app.accordpay.passkey';
 
 export const isCircleModularWalletConfigured = Boolean(CLIENT_KEY);
 
@@ -32,6 +35,54 @@ type CircleRuntime = {
 };
 
 let activeRuntime: CircleRuntime | null = null;
+
+type StoredPasskeyCredential = {
+  version: 1;
+  id: string;
+  publicKey: Hex;
+  rpId?: string;
+};
+
+function readStoredPasskeyCredential(): StoredPasskeyCredential | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(PASSKEY_CREDENTIAL_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<StoredPasskeyCredential>;
+    if (
+      value.version !== 1 ||
+      typeof value.id !== 'string' ||
+      !value.id ||
+      typeof value.publicKey !== 'string' ||
+      !value.publicKey.startsWith('0x') ||
+      (value.rpId !== undefined && typeof value.rpId !== 'string')
+    ) {
+      window.localStorage.removeItem(PASSKEY_CREDENTIAL_KEY);
+      return null;
+    }
+    return value as StoredPasskeyCredential;
+  } catch {
+    window.localStorage.removeItem(PASSKEY_CREDENTIAL_KEY);
+    return null;
+  }
+}
+
+function storePasskeyCredential(credential: { id: string; publicKey: Hex; rpId?: string }): void {
+  const value: StoredPasskeyCredential = {
+    version: 1,
+    id: credential.id,
+    publicKey: credential.publicKey,
+    ...(credential.rpId ? { rpId: credential.rpId } : {}),
+  };
+  window.localStorage.setItem(PASSKEY_CREDENTIAL_KEY, JSON.stringify(value));
+}
+
+function passkeyOwner(credential: { id: string; publicKey: Hex; rpId?: string }) {
+  return toWebAuthnAccount({
+    credential: { id: credential.id, publicKey: credential.publicKey },
+    ...(credential.rpId ? { rpId: credential.rpId } : {}),
+  });
+}
 
 function deviceWalletName(): string {
   const storageKey = 'accordpay_passkey_wallet_name';
@@ -111,12 +162,31 @@ export async function createCirclePasskeyProvider(mode: PasskeyMode, feeMode: Ne
       mode: mode === 'register' ? WebAuthnMode.Register : WebAuthnMode.Login,
       ...(mode === 'register' ? { username: deviceWalletName() } : {}),
     });
-    activeRuntime = await buildRuntime(toWebAuthnAccount({ credential }));
+    activeRuntime = await buildRuntime(passkeyOwner(credential));
+    storePasskeyCredential(credential);
     setNetworkFeeMode(feeMode);
     return { address: activeRuntime.smartAccount.address, provider: createProvider(activeRuntime) };
   } catch (error) {
     throw new Error(formatCircleWalletError(error));
   }
+}
+
+/**
+ * Rebuilds the in-memory Circle wallet after a page reload. Only the public
+ * WebAuthn credential descriptor is persisted; signing still requires the
+ * passkey authenticator on the user's device.
+ */
+export async function restoreCirclePasskeyProvider(feeMode: NetworkFeeMode): Promise<{ address: Address; provider: ViemProvider } | null> {
+  if (!CLIENT_KEY || typeof window === 'undefined') return null;
+  const credential = readStoredPasskeyCredential();
+  if (!credential) return null;
+  activeRuntime = await buildRuntime(passkeyOwner(credential));
+  setNetworkFeeMode(feeMode);
+  return { address: activeRuntime.smartAccount.address, provider: createProvider(activeRuntime) };
+}
+
+export function clearCirclePasskeyRuntime(): void {
+  activeRuntime = null;
 }
 
 export async function enablePasskeyRecovery(feeMode: NetworkFeeMode): Promise<string> {
@@ -149,7 +219,8 @@ export async function recoverCirclePasskeyProvider(mnemonic: string, feeMode: Ne
       credential,
       paymaster: feeMode === 'sponsored' ? true : undefined,
     });
-    activeRuntime = await buildRuntime(toWebAuthnAccount({ credential }));
+    activeRuntime = await buildRuntime(passkeyOwner(credential));
+    storePasskeyCredential(credential);
     setNetworkFeeMode(feeMode);
     window.localStorage.setItem(`${RECOVERY_KEY_PREFIX}${activeRuntime.smartAccount.address.toLowerCase()}`, 'true');
     return { address: activeRuntime.smartAccount.address, provider: createProvider(activeRuntime) };

@@ -6,9 +6,8 @@ import { Fingerprint, X } from 'lucide-react';
 import { useWallet } from '@/lib/wallet';
 
 /**
- * Shows a sticky banner when the user previously connected a passkey wallet
- * but the page was refreshed (the in-memory runtime is lost on reload).
- * Tapping the banner navigates to the onboarding page in "auto login" mode.
+ * Fallback for legacy sessions created before silent passkey restoration was
+ * available, or when the saved runtime descriptor can no longer be restored.
  */
 export default function PasskeyReconnectBanner() {
   const { status, isPasskeySession } = useWallet();
@@ -55,10 +54,10 @@ export default function PasskeyReconnectBanner() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-              Reconnect passkey wallet
+              Passkey confirmation required
             </p>
             <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-zinc-400">
-              Your session ended after refresh. Tap to unlock with your passkey.
+              Tap to unlock your existing AccordPay wallet on this device.
             </p>
             <button
               type="button"

@@ -61,7 +61,7 @@ function OnboardingContent() {
           </div>
           {autoMode === 'login' ? (
             <>
-              <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-blue-100">Session ended after refresh</p>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-blue-100">Passkey confirmation required</p>
               <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Reconnect your passkey wallet</h1>
               <p className="mt-2 text-sm leading-6 text-blue-100">Tap the button below to unlock your existing AccordPay wallet with your passkey (Face ID, fingerprint, or device lock).</p>
             </>
