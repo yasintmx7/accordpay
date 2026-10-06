@@ -6,12 +6,39 @@ import Link from 'next/link';
 import { Check, Copy, LogOut, Wallet } from 'lucide-react';
 
 import { triggerHaptic } from '@/lib/haptics';
+import { ARC_TESTNET_CHAIN_ID, USDC_ADDRESS } from '@/lib/config';
+import { formatNative, formatUsdc, getNativeBalance, getUsdcBalance } from '@/lib/usdc';
+
+type WalletBalances = {
+  loading: boolean;
+  usdc: bigint | null;
+  native: bigint | null;
+  error: boolean;
+};
+
+const initialBalances: WalletBalances = {
+  loading: true,
+  usdc: null,
+  native: null,
+  error: false,
+};
+
+function formatBalance(value: string) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric === 0) return '0.00';
+  if (numeric < 0.0001) return '<0.0001';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(numeric);
+}
 
 export default function WalletButton() {
-  const { status, address, wallets, activeWallet, error, connect, disconnect, switchToArcTestnet } = useWallet();
+  const { status, address, chainId, chain, wallets, activeWallet, publicClient, error, connect, disconnect, switchToArcTestnet } = useWallet();
   const [showPicker, setShowPicker] = useState(false);
   const [showCard, setShowCard] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [balances, setBalances] = useState<WalletBalances>(initialBalances);
   const pickerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +63,40 @@ export default function WalletButton() {
       return () => clearTimeout(timer);
     }
   }, [hasSavedWallet, status]);
+
+  useEffect(() => {
+    if (status !== 'connected' || !address || !publicClient || chainId !== ARC_TESTNET_CHAIN_ID) return;
+
+    let cancelled = false;
+
+    const loadBalances = async (showLoading: boolean) => {
+      if (showLoading) {
+        setBalances(initialBalances);
+      }
+
+      const [usdcResult, nativeResult] = await Promise.allSettled([
+        getUsdcBalance(publicClient, USDC_ADDRESS, address),
+        getNativeBalance(publicClient, address),
+      ]);
+
+      if (cancelled) return;
+
+      setBalances({
+        loading: false,
+        usdc: usdcResult.status === 'fulfilled' ? usdcResult.value : null,
+        native: nativeResult.status === 'fulfilled' ? nativeResult.value : null,
+        error: usdcResult.status === 'rejected' || nativeResult.status === 'rejected',
+      });
+    };
+
+    void loadBalances(true);
+    const refreshTimer = window.setInterval(() => void loadBalances(false), 30_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshTimer);
+    };
+  }, [status, address, chainId, publicClient]);
 
   // Close picker on outside click / Escape
   useEffect(() => {
@@ -124,13 +185,48 @@ export default function WalletButton() {
               )}
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">{walletName}</p>
-                <p className="truncate font-mono text-[11px] text-slate-500 dark:text-zinc-500">
-                  {address}
+                <p className="font-mono text-[11px] text-slate-500 dark:text-zinc-500">
+                  {shortAddr(address)}
                 </p>
               </div>
               <span className="ml-auto shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
                 Arc
               </span>
+            </div>
+
+            <div className="space-y-3 border-b border-slate-100 px-4 py-3.5 dark:border-zinc-800">
+              <div className="flex items-end justify-between gap-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-zinc-500">USDC Balance</p>
+                {balances.loading ? (
+                  <span className="h-4 w-20 animate-pulse rounded bg-slate-100 dark:bg-zinc-800" aria-label="Loading USDC balance" />
+                ) : balances.usdc !== null ? (
+                  <p className="text-sm font-bold tabular-nums text-slate-900 dark:text-zinc-100">
+                    {formatBalance(formatUsdc(balances.usdc))} <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">USDC</span>
+                  </p>
+                ) : (
+                  <p className="text-xs font-medium text-slate-400 dark:text-zinc-500">Unavailable</p>
+                )}
+              </div>
+
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-zinc-500">Network balance</p>
+                  <p className="mt-0.5 text-[10px] text-slate-400 dark:text-zinc-600">Native gas balance</p>
+                </div>
+                {balances.loading ? (
+                  <span className="h-4 w-20 animate-pulse rounded bg-slate-100 dark:bg-zinc-800" aria-label="Loading network balance" />
+                ) : balances.native !== null ? (
+                  <p className="text-sm font-semibold tabular-nums text-slate-700 dark:text-zinc-300">
+                    {formatBalance(formatNative(balances.native))} <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">{chain?.nativeCurrency.symbol ?? 'USDC'}</span>
+                  </p>
+                ) : (
+                  <p className="text-xs font-medium text-slate-400 dark:text-zinc-500">Unavailable</p>
+                )}
+              </div>
+
+              {!balances.loading && balances.error && (
+                <p className="text-[11px] leading-4 text-amber-600 dark:text-amber-400">Some balances could not be refreshed.</p>
+              )}
             </div>
 
             <div className="p-2">
