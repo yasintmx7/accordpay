@@ -1,4 +1,4 @@
-import { defineChain } from 'viem';
+import { createPublicClient, defineChain, fallback, http } from 'viem';
 import {
   ARC_TESTNET_CHAIN_ID,
   ARC_TESTNET_EXPLORER_URL,
@@ -44,6 +44,32 @@ export const arcTestnet = defineChain({
 });
 
 export const supportedChains = [arcTestnet] as const;
+
+/**
+ * Arc's public testnet RPC can occasionally return EIP-1474 -32005 rate-limit
+ * errors. Use multiple official endpoints so a transient limit on one provider
+ * does not interrupt invoice reads or transaction preflight checks.
+ */
+export function createArcPublicClient() {
+  const transports = [...new Set(arcTestnet.rpcUrls.default.http)].map((url) =>
+    http(url, {
+      retryCount: 1,
+      retryDelay: 250,
+      timeout: 10_000,
+    }),
+  );
+
+  return createPublicClient({
+    chain: arcTestnet,
+    transport: fallback(transports, {
+      rank: true,
+      retryCount: 1,
+      retryDelay: 250,
+    }),
+    batch: { multicall: true },
+    pollingInterval: 5_000,
+  });
+}
 
 export function getExplorerUrl(
   chainId: number,

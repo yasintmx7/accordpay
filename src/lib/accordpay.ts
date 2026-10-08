@@ -81,6 +81,17 @@ export function formatTransactionError(error: unknown): string {
     message?: string;
     cause?: { shortMessage?: string; details?: string; message?: string };
   };
+  const raw = [
+    candidate.shortMessage,
+    candidate.cause?.shortMessage,
+    candidate.details,
+    candidate.cause?.details,
+    candidate.message,
+    candidate.cause?.message,
+  ].filter(Boolean).join(' ');
+  if (/request exceeds defined limit|limit exceeded|rate.?limit|too many requests|-32005/i.test(raw)) {
+    return 'Arc Testnet is temporarily busy. Wait a few seconds and try again. Any completed USDC approval will be reused.';
+  }
   return (
     candidate.shortMessage ||
     candidate.cause?.shortMessage ||
@@ -232,13 +243,26 @@ async function writeInvoiceAction(
   contractAddress: Address,
   invoiceId: bigint,
 ): Promise<`0x${string}`> {
+  const args = [invoiceId] as const;
+  const [estimatedGas, fees] = await Promise.all([
+    publicClient.estimateContractGas({
+      address: contractAddress,
+      abi: accordPayAbi,
+      functionName,
+      args,
+      account: walletClient.account!,
+    }),
+    publicClient.estimateFeesPerGas(),
+  ]);
   const hash = await walletClient.writeContract({
     address: contractAddress,
     abi: accordPayAbi,
     functionName,
-    args: [invoiceId],
+    args,
     chain: walletClient.chain,
     account: walletClient.account!,
+    gas: (estimatedGas * 120n) / 100n,
+    ...fees,
   });
   const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 5000 });
   if (receipt.status !== 'success') throw new Error('AccordPay transaction reverted.');

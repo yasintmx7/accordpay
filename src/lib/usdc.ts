@@ -45,16 +45,42 @@ export async function approveUsdc(
   spender: Address,
   amount: bigint,
 ): Promise<`0x${string}`> {
+  const args = [spender, amount] as const;
+  const [estimatedGas, fees] = await Promise.all([
+    publicClient.estimateContractGas({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'approve',
+      args,
+      account: walletClient.account!,
+    }),
+    publicClient.estimateFeesPerGas(),
+  ]);
   const hash = await walletClient.writeContract({
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'approve',
-    args: [spender, amount],
+    args,
     chain: walletClient.chain,
     account: walletClient.account!,
+    gas: (estimatedGas * 120n) / 100n,
+    ...fees,
   });
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   if (receipt.status !== 'success') throw new Error('USDC approval reverted.');
+
+  // A fallback RPC may briefly trail the node that confirmed the approval.
+  // Wait until the new allowance is visible before simulating fundInvoice.
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const allowance = await getUsdcAllowance(
+      publicClient,
+      tokenAddress,
+      walletClient.account!.address,
+      spender,
+    );
+    if (allowance >= amount) return hash;
+    await new Promise((resolve) => setTimeout(resolve, 750));
+  }
   return hash;
 }
 

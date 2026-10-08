@@ -11,16 +11,14 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  createPublicClient,
   createWalletClient,
   custom,
-  http,
   type Address,
   type Chain,
   type PublicClient,
   type WalletClient,
 } from 'viem';
-import { arcTestnet, supportedChains } from './arc';
+import { arcTestnet, createArcPublicClient, supportedChains } from './arc';
 import {
   clearCirclePasskeyRuntime,
   getNetworkFeeMode,
@@ -197,12 +195,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       chain: detectedChain ?? arcTestnet,
       transport: custom(wallet.provider as Parameters<typeof custom>[0]),
     });
-    const nextPublicClient = createPublicClient({
-      chain: arcTestnet,
-      transport: http(process.env.NEXT_PUBLIC_ARC_RPC_URL || 'https://rpc.testnet.arc.io'),
-      batch: { multicall: true },
-      pollingInterval: 5000,
-    });
+    const nextPublicClient = createArcPublicClient();
 
     setAddress(accounts[0]);
     setChainId(id);

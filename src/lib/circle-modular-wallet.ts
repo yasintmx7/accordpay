@@ -1,10 +1,9 @@
 'use client';
 
-import type { Address, EIP1193Provider as ViemProvider, Hex } from 'viem';
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, type Address, type EIP1193Provider as ViemProvider, type Hex } from 'viem';
 import { createBundlerClient, toWebAuthnAccount } from 'viem/account-abstraction';
 import { english, generateMnemonic, mnemonicToAccount } from 'viem/accounts';
-import { arcTestnet } from 'viem/chains';
+import { arcTestnet, createArcPublicClient } from './arc';
 import {
   EIP1193Provider as CircleEIP1193Provider,
   recoveryActions,
@@ -20,7 +19,6 @@ export type PasskeyMode = 'register' | 'login';
 
 const CLIENT_URL = process.env.NEXT_PUBLIC_CIRCLE_MODULAR_WALLET_URL || 'https://modular-sdk.circle.com/v1/rpc/w3s/buidl';
 const CLIENT_KEY = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_KEY || '';
-const RPC_URL = process.env.NEXT_PUBLIC_ARC_RPC_URL || 'https://rpc.testnet.arc.io';
 const FEE_KEY = 'accordpay_fee_mode';
 const RECOVERY_KEY_PREFIX = 'accordpay_recovery_enabled_';
 const PASSKEY_CREDENTIAL_KEY = 'accordpay_passkey_credential_v1';
@@ -119,7 +117,7 @@ export function formatCircleWalletError(error: unknown): string {
 }
 
 function createProvider(runtime: CircleRuntime): ViemProvider {
-  const readClient = createPublicClient({ chain: arcTestnet, transport: http(RPC_URL) });
+  const readClient = createArcPublicClient();
   const circleProvider = new CircleEIP1193Provider(runtime.bundlerClient as never, readClient as never);
   return {
     request: async ({ method, params }: { method: string; params?: readonly unknown[] | object }) => {
